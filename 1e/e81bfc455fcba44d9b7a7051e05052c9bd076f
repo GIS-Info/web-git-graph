@@ -1,0 +1,27 @@
+.github/workflows/publish.yml
+  s_44ee3659e07d62::t_88416921c72c9c 1-29
+packages/web-git-graph/package.json
+  s_44ee3659e07d62::t_44ae49a38badd0 1-91
+packages/web-git-graph/src/node/backend.ts
+  s_44ee3659e07d62::t_61269c23664a75 1-954
+packages/web-git-graph/test/backend.test.ts
+  s_44ee3659e07d62::t_507f3e5f10a1ff 1-99
+pnpm-lock.yaml
+  s_44ee3659e07d62::t_fceacf137d98bd 1-1632
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "1ee81bfc455fcba44d9b7a7051e05052c9bd076f",
+  "prompts": {},
+  "sessions": {
+    "s_44ee3659e07d62": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa38c-e56d-76c2-9eda-099324e58825",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
