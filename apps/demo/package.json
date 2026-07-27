@@ -1,0 +1,20 @@
+{
+  "name": "@web-git-graph/demo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/archivo": "^5.2.6",
+    "@fontsource-variable/recursive": "^5.2.6",
+    "web-git-graph": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vite": "^6.1.0"
+  }
+}

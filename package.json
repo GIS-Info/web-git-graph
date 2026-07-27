@@ -1,0 +1,22 @@
+{
+  "name": "web-git-graph-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.28.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm --filter web-git-graph build && pnpm --filter @web-git-graph/demo build",
+    "dev": "pnpm --filter @web-git-graph/demo dev",
+    "lint": "pnpm --filter web-git-graph lint",
+    "test": "pnpm --filter web-git-graph test",
+    "test:e2e": "playwright test",
+    "typecheck": "pnpm -r typecheck",
+    "pack:check": "pnpm --filter web-git-graph pack:check"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "name": "web-git-graph",
+  "version": "0.1.0",
+  "description": "A framework-free Git history graph Web Component with GitHub, HTTP, and local Node providers.",
+  "type": "module",
+  "license": "MIT",
+  "author": "kian-zh",
+  "homepage": "https://kian-zh.github.io/web-git-graph/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kian-zh/web-git-graph.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kian-zh/web-git-graph/issues"
+  },
+  "keywords": [
+    "git",
+    "git-graph",
+    "web-component",
+    "custom-element",
+    "git-history",
+    "visualization"
+  ],
+  "sideEffects": [
+    "./dist/register.js"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "web-git-graph": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./register": {
+      "types": "./dist/register.d.ts",
+      "import": "./dist/register.js",
+      "require": "./dist/register.cjs"
+    },
+    "./providers/github": {
+      "types": "./dist/providers/github.d.ts",
+      "import": "./dist/providers/github.js",
+      "require": "./dist/providers/github.cjs"
+    },
+    "./providers/http": {
+      "types": "./dist/providers/http.d.ts",
+      "import": "./dist/providers/http.js",
+      "require": "./dist/providers/http.cjs"
+    },
+    "./protocol": {
+      "types": "./dist/protocol.d.ts",
+      "import": "./dist/protocol.js",
+      "require": "./dist/protocol.cjs"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js",
+      "require": "./dist/node.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "pack:check": "pnpm build && npm pack --dry-run --cache .npm-cache"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

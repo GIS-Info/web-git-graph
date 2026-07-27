@@ -1,0 +1,99 @@
+import { execFile } from "node:child_process";
+import { mkdtemp, realpath, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { LocalGitBackend } from "../src/node/backend";
+
+const exec = promisify(execFile);
+let repository = "";
+let backend: LocalGitBackend;
+
+async function git(...args: string[]): Promise<string> {
+  return (await exec("git", ["-C", repository, ...args], { encoding: "utf8" })).stdout.trim();
+}
+
+describe("LocalGitBackend", () => {
+  beforeAll(async () => {
+    repository = await realpath(await mkdtemp(join(tmpdir(), "web-git-graph-")));
+    await exec("git", ["init", "-b", "main", repository]);
+    await git("config", "user.name", "Graph Test");
+    await git("config", "user.email", "graph@example.test");
+    await writeFile(join(repository, "README.md"), "# one\n");
+    await git("add", "README.md");
+    await git("commit", "-m", "initial");
+    await git("switch", "-c", "feature");
+    await writeFile(join(repository, "feature.txt"), "feature\n");
+    await git("add", "feature.txt");
+    await git("commit", "-m", "feature");
+    await git("switch", "main");
+    await writeFile(join(repository, "README.md"), "# two\n");
+    await git("commit", "-am", "main change");
+    await git("merge", "--no-ff", "feature", "-m", "merge feature");
+    await writeFile(join(repository, "untracked.txt"), "local\n");
+    backend = new LocalGitBackend({
+      repositories: { test: repository },
+      allowedRoots: [repository],
+      maxPageSize: 2
+    });
+  });
+
+  afterAll(async () => {
+    // Temporary fixtures are intentionally left to the operating system's
+    // temporary-directory cleanup; no recursive deletion is performed here.
+  });
+
+  it("reads a paginated graph and working-tree pseudo commit", async () => {
+    const first = await backend.getHistory("test", { limit: 2, includeWorkingTree: true });
+    expect(first.commits[0]?.kind).toBe("working-tree");
+    expect(first.commits.some((commit) => commit.parents.length === 2)).toBe(true);
+    expect(first.hasMore).toBe(true);
+    expect(first.cursor).toBeTruthy();
+
+    const next = await backend.getHistory("test", { limit: 2, cursor: first.cursor });
+    expect(next.commits.every((commit) => commit.kind !== "working-tree")).toBe(true);
+  });
+
+  it("returns details, comparison stats and a textual patch", async () => {
+    const page = await backend.getHistory("test", { limit: 2, includeWorkingTree: false });
+    const merge = page.commits[0]!;
+    const details = await backend.getCommitDetails("test", { kind: "commit", oid: merge.oid });
+    expect(details.commit.oid).toBe(merge.oid);
+
+    const comparison = await backend.compare(
+      "test",
+      { kind: "commit", oid: merge.parents[0]! },
+      { kind: "commit", oid: merge.oid }
+    );
+    expect(comparison.changes.some((change) => change.path === "feature.txt")).toBe(true);
+
+    const diff = await backend.getFileDiff(
+      "test",
+      comparison.base,
+      comparison.head,
+      "feature.txt"
+    );
+    expect(diff.patch).toContain("feature.txt");
+  });
+
+  it("reads root commit details against Git's empty tree", async () => {
+    const root = await git("rev-list", "--max-parents=0", "HEAD");
+    const details = await backend.getCommitDetails("test", { kind: "commit", oid: root });
+    expect(details.changes).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: "README.md", kind: "add" })])
+    );
+    expect(details.commit.additions).toBeGreaterThan(0);
+  });
+
+  it("rejects paths outside allowedRoots and revision expressions", async () => {
+    const denied = new LocalGitBackend({
+      repositories: { denied: tmpdir() },
+      allowedRoots: [repository]
+    });
+    await expect(denied.getHistory("denied")).rejects.toMatchObject({ code: "forbidden" });
+    await expect(
+      backend.getCommitDetails("test", { kind: "commit", oid: "HEAD~1" })
+    ).rejects.toMatchObject({ code: "bad_request" });
+  });
+});

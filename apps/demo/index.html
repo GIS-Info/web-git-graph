@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Web Git Graph is a framework-free Git history graph with browser and local Node providers."
+    />
+    <title>Web Git Graph — the commit DAG, made legible</title>
+  </head>
+  <body>
+    <main>
+      <header class="masthead">
+        <a class="wordmark" href="./" aria-label="Web Git Graph home">
+          <span class="mark" aria-hidden="true"></span>
+          <span>web/git/graph</span>
+        </a>
+        <nav>
+          <a href="#install">Install</a>
+          <a href="#architecture">Architecture</a>
+          <a href="https://github.com/kian-zh/web-git-graph">GitHub ↗</a>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <div class="eyebrow"><span>01</span> Native Web Component · Node provider · HTTP v1</div>
+        <h1>The commit DAG,<br /><em>made legible.</em></h1>
+        <p class="lede">
+          A zero-framework Git history surface for any webpage. Bring public GitHub data,
+          your own backend, or a local repository. The graph stays the same.
+        </p>
+        <div class="install-line" id="install">
+          <code>npm i web-git-graph</code>
+          <button id="copy-install" type="button">COPY</button>
+        </div>
+      </section>
+
+      <section class="lab" aria-labelledby="lab-title">
+        <div class="lab-heading">
+          <div>
+            <span class="section-number">02 / LIVE GRAPH</span>
+            <h2 id="lab-title">Read a real repository</h2>
+          </div>
+          <form id="repo-form">
+            <label for="repository">Public GitHub repository</label>
+            <div>
+              <input id="repository" name="repository" value="kian-zh/web-git-graph" />
+              <button type="submit">LOAD DAG</button>
+            </div>
+          </form>
+        </div>
+        <p class="rate-note" id="status">
+          Showing a deterministic fixture. Load a public repository with GitHub’s unauthenticated API.
+        </p>
+        <web-git-graph id="graph" theme="dark"></web-git-graph>
+      </section>
+
+      <section class="architecture" id="architecture">
+        <div class="section-number">03 / ONE MODEL, THREE EDGES</div>
+        <h2>Backends change.<br />The graph contract doesn’t.</h2>
+        <div class="architecture-grid">
+          <article>
+            <b>01</b><h3>Browser direct</h3>
+            <p>Connect public GitHub history without running a server.</p>
+            <code>providers/github</code>
+          </article>
+          <article>
+            <b>02</b><h3>HTTP protocol</h3>
+            <p>Use any language or framework behind a versioned JSON contract.</p>
+            <code>providers/http</code>
+          </article>
+          <article>
+            <b>03</b><h3>Local Git</h3>
+            <p>Read worktrees, stashes and diffs through a hardened Node backend.</p>
+            <code>web-git-graph/node</code>
+          </article>
+        </div>
+      </section>
+
+      <footer>
+        <span>MIT · v0.1.0</span>
+        <span>Designed for dense histories and quiet focus.</span>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "web-git-graph": ["../../packages/web-git-graph/src/index.ts"],
+      "web-git-graph/register": ["../../packages/web-git-graph/src/register.ts"],
+      "web-git-graph/providers/github": ["../../packages/web-git-graph/src/providers/github.ts"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}
