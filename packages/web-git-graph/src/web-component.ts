@@ -11,145 +11,171 @@ import type {
 } from "./types";
 
 const ELEMENT_NAME = "web-git-graph";
-const PALETTE = ["#22d3a7", "#ffb454", "#ff6b6b", "#6ea8fe", "#c084fc", "#a3e635", "#f472b6"];
+const PALETTE = ["#e3008c", "#007acc", "#00c853", "#ff8c00", "#b180d7", "#00b7c3", "#dcdcaa"];
 
 const STYLES = `
 :host {
-  --wgg-bg: #121516;
-  --wgg-panel: #181c1e;
-  --wgg-panel-raised: #202527;
-  --wgg-ink: #eef2ed;
-  --wgg-muted: #89918d;
-  --wgg-faint: #535b57;
-  --wgg-line: #2a3030;
-  --wgg-accent: #22d3a7;
-  --wgg-warning: #ffb454;
-  --wgg-row-height: 42px;
-  --wgg-font: "Aptos Narrow", "Arial Narrow", sans-serif;
-  --wgg-mono: "Berkeley Mono", "JetBrains Mono", "SFMono-Regular", monospace;
+  --wgg-bg: #1e1e1e;
+  --wgg-panel: #252526;
+  --wgg-panel-raised: #2d2d30;
+  --wgg-ink: #d4d4d4;
+  --wgg-muted: #a9a9a9;
+  --wgg-faint: #777;
+  --wgg-line: #3c3c3c;
+  --wgg-hover: #2a2d2e;
+  --wgg-selected: #37373d;
+  --wgg-accent: #3794ff;
+  --wgg-warning: #cca700;
+  --wgg-row-height: 24px;
+  --wgg-graph-width: 72px;
+  --wgg-date-width: 142px;
+  --wgg-author-width: 150px;
+  --wgg-commit-width: 82px;
+  --wgg-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --wgg-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   display: block;
   min-height: 420px;
   color: var(--wgg-ink);
   font-family: var(--wgg-font);
   background: var(--wgg-bg);
   border: 1px solid var(--wgg-line);
-  border-radius: 10px;
   overflow: hidden;
   color-scheme: dark;
 }
 :host([theme="light"]) {
-  --wgg-bg: #f4f2ea;
-  --wgg-panel: #ebe8de;
-  --wgg-panel-raised: #fffef9;
-  --wgg-ink: #18201c;
-  --wgg-muted: #647069;
-  --wgg-faint: #99a29c;
-  --wgg-line: #d5d4ca;
+  --wgg-bg: #ffffff;
+  --wgg-panel: #f3f3f3;
+  --wgg-panel-raised: #f8f8f8;
+  --wgg-ink: #333333;
+  --wgg-muted: #616161;
+  --wgg-faint: #8e8e8e;
+  --wgg-line: #d4d4d4;
+  --wgg-hover: #f0f0f0;
+  --wgg-selected: #e4e6f1;
   color-scheme: light;
 }
-:host([density="compact"]) { --wgg-row-height: 34px; }
+:host([density="compact"]) { --wgg-row-height: 20px; }
 * { box-sizing: border-box; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 .shell { min-height: inherit; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
 .toolbar {
-  display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(150px, 260px) auto;
-  gap: 8px;
+  min-height: 42px;
+  display: flex;
+  gap: 16px;
   align-items: center;
-  padding: 10px 12px;
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--wgg-accent) 8%, transparent), transparent 42%),
-    var(--wgg-panel);
+  padding: 6px 10px;
+  background: var(--wgg-panel);
   border-bottom: 1px solid var(--wgg-line);
+  font-size: 12px;
 }
-.brand { min-width: 0; display: flex; align-items: baseline; gap: 10px; }
-.brand strong { font-family: var(--wgg-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
-.brand span { color: var(--wgg-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.branch-control, .remote-control { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.branch-control strong, .remote-control { font-weight: 600; }
+.branch-control select { width: min(250px, 28vw); }
+.remote-control input { margin: 0; accent-color: var(--wgg-accent); }
+.repository-name {
+  min-width: 0; flex: 1; color: var(--wgg-muted); overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; text-align: center;
+}
 .search {
-  width: 100%; border: 1px solid var(--wgg-line); background: var(--wgg-bg);
-  border-radius: 5px; padding: 7px 9px; outline: none;
+  width: min(240px, 25vw); height: 28px; border: 1px solid var(--wgg-line); background: var(--wgg-bg);
+  border-radius: 2px; padding: 4px 7px; outline: none; font-size: 12px;
 }
-.search:focus, select:focus, button:focus-visible { outline: 2px solid var(--wgg-accent); outline-offset: 1px; }
-.tools { display: flex; align-items: center; gap: 6px; }
+.search:focus, select:focus, button:focus-visible { outline: 1px solid var(--wgg-accent); outline-offset: -1px; }
+.tools { display: flex; align-items: center; gap: 4px; margin-left: auto; }
 select, .icon-button {
-  min-height: 30px; border: 1px solid var(--wgg-line); background: var(--wgg-panel-raised);
-  border-radius: 5px; padding: 5px 8px;
+  height: 28px; border: 1px solid var(--wgg-line); background: var(--wgg-bg);
+  border-radius: 2px; padding: 3px 7px;
 }
-.icon-button { min-width: 32px; }
-.body { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 0; transition: grid-template-columns 180ms ease; }
-.body.drawer-open { grid-template-columns: minmax(0, 1fr) minmax(320px, 38%); }
+.icon-button { min-width: 28px; color: var(--wgg-muted); background: transparent; border-color: transparent; }
+.icon-button:hover { color: var(--wgg-ink); background: var(--wgg-hover); }
+.body {
+  min-height: 0; position: relative; display: grid; grid-template-rows: minmax(0, 1fr) 0;
+  transition: grid-template-rows 120ms ease;
+}
+.body.drawer-open { grid-template-rows: minmax(150px, 1fr) minmax(190px, 42%); }
 .history { min-width: 0; display: grid; grid-template-rows: 34px minmax(0, 1fr); }
 .header, .row {
   display: grid;
-  grid-template-columns: var(--graph-width, 160px) minmax(150px, 2.4fr) minmax(90px, .85fr) 130px 88px;
+  grid-template-columns:
+    var(--wgg-graph-width) minmax(220px, 1fr) var(--wgg-date-width)
+    var(--wgg-author-width) var(--wgg-commit-width);
   align-items: center;
 }
 .header {
-  padding-right: 10px; background: var(--wgg-panel); color: var(--wgg-muted); border-bottom: 1px solid var(--wgg-line);
-  font-family: var(--wgg-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  padding-right: 10px; background: var(--wgg-bg); color: var(--wgg-ink);
+  border-bottom: 1px solid var(--wgg-line); font-size: 12px; font-weight: 600;
 }
-.header > span { padding: 0 10px; }
+.header > span {
+  height: 100%; display: flex; align-items: center; justify-content: center;
+  padding: 0 8px; border-right: 1px solid var(--wgg-line);
+}
 .scroller { position: relative; overflow: auto; min-height: 0; outline: none; scrollbar-color: var(--wgg-faint) transparent; }
-.spacer { position: relative; min-width: 780px; }
+.spacer { position: relative; min-width: 720px; }
 .window { position: absolute; inset: 0 0 auto 0; }
 .row {
-  height: var(--wgg-row-height); padding-right: 10px; border-bottom: 1px solid color-mix(in srgb, var(--wgg-line) 72%, transparent);
-  position: relative; cursor: default;
+  height: var(--wgg-row-height); padding-right: 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--wgg-line) 30%, transparent);
+  position: relative; cursor: default; font-size: 12px;
 }
-.row:hover, .row.preview { background: color-mix(in srgb, var(--wgg-accent) 7%, transparent); }
-.row.selected { background: color-mix(in srgb, var(--wgg-accent) 13%, transparent); }
-.row.compare { box-shadow: inset 3px 0 var(--wgg-warning); }
+.row:hover, .row.preview { background: var(--wgg-hover); }
+.row.selected { background: var(--wgg-selected); }
+.row.compare { box-shadow: inset 2px 0 var(--wgg-warning); }
+.row.merge .message { color: var(--wgg-muted); }
+.row.working-tree .message { font-weight: 600; }
 .row:focus { outline: 1px solid var(--wgg-accent); outline-offset: -1px; }
 .graph-cell { height: 100%; position: relative; }
-.subject { min-width: 0; display: flex; align-items: center; gap: 7px; padding: 0 10px; }
-.message { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-.refs { flex: 0 1 auto; display: flex; gap: 4px; min-width: 0; overflow: hidden; }
+.subject { min-width: 0; display: flex; align-items: center; gap: 5px; padding: 0 4px; }
+.message { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.refs { flex: 0 1 auto; display: flex; gap: 2px; min-width: 0; overflow: hidden; }
 .ref {
-  font: 10px/1.4 var(--wgg-mono); padding: 1px 5px; border: 1px solid color-mix(in srgb, var(--wgg-accent) 55%, var(--wgg-line));
-  color: var(--wgg-accent); border-radius: 999px; white-space: nowrap;
+  max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 10px/15px var(--wgg-font); padding: 0 5px; border: 1px solid var(--ref-color, var(--wgg-accent));
+  color: var(--wgg-ink); border-radius: 2px;
 }
-.ref.tag { color: var(--wgg-warning); border-color: color-mix(in srgb, var(--wgg-warning) 55%, var(--wgg-line)); }
-.ref.stash { color: #f472b6; border-color: #f472b688; }
+.ref.current, .ref.head { background: var(--ref-color, var(--wgg-accent)); color: #fff; }
+.ref.remote { border-color: var(--wgg-faint); color: var(--wgg-muted); }
+.ref.tag { background: #0e639c; border-color: #0e639c; color: #fff; }
+.ref.stash { background: #9b2f86; border-color: #9b2f86; color: #fff; }
 .author, .date, .oid {
-  min-width: 0; padding: 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: var(--wgg-muted); font-size: 12px;
+  min-width: 0; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--wgg-ink);
 }
-.oid { font-family: var(--wgg-mono); font-size: 10px; }
+.date, .author { text-align: center; }
+.oid { font-family: var(--wgg-mono); font-size: 11px; text-align: center; }
 .graph {
   position: absolute; pointer-events: none; overflow: visible;
 }
-.graph path { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; opacity: .88; }
-.graph circle { stroke-width: 2; vector-effect: non-scaling-stroke; }
+.graph path { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.graph circle { stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .drawer {
-  min-width: 0; overflow: auto; background: var(--wgg-panel-raised); border-left: 1px solid var(--wgg-line);
-  opacity: 0; pointer-events: none; transform: translateX(12px); transition: opacity 160ms ease, transform 160ms ease;
+  min-height: 0; overflow: auto; background: var(--wgg-panel); border-top: 1px solid var(--wgg-line);
+  opacity: 0; pointer-events: none; transform: translateY(6px); transition: opacity 100ms ease, transform 100ms ease;
 }
 .drawer-open .drawer { opacity: 1; pointer-events: auto; transform: none; }
 .drawer-head {
   position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center;
-  padding: 11px 14px; background: color-mix(in srgb, var(--wgg-panel-raised) 94%, transparent);
-  backdrop-filter: blur(10px); border-bottom: 1px solid var(--wgg-line);
+  height: 30px; padding: 0 8px; background: var(--wgg-panel-raised); border-bottom: 1px solid var(--wgg-line);
 }
-.drawer-title { font: 11px var(--wgg-mono); letter-spacing: .08em; text-transform: uppercase; }
-.drawer-content { padding: 16px; }
-.commit-title { margin: 0 0 9px; font-size: 17px; line-height: 1.25; }
-.meta { display: grid; grid-template-columns: 74px 1fr; gap: 7px; color: var(--wgg-muted); font-size: 12px; }
-.meta dt { font-family: var(--wgg-mono); color: var(--wgg-faint); }
+.drawer-title { font-size: 12px; font-weight: 600; }
+.drawer-content { padding: 10px 14px 16px; }
+.commit-title { margin: 0 0 8px; font-size: 13px; line-height: 1.3; font-weight: 600; }
+.meta { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 4px 8px; color: var(--wgg-muted); font-size: 11px; }
+.meta dt { color: var(--wgg-faint); }
 .meta dd { margin: 0; overflow-wrap: anywhere; }
-.actions { display: flex; flex-wrap: wrap; gap: 7px; margin: 16px 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
 .action {
-  border: 1px solid var(--wgg-line); border-radius: 4px; background: var(--wgg-panel);
-  padding: 6px 9px; font-size: 12px;
+  border: 1px solid var(--wgg-line); border-radius: 2px; background: var(--wgg-panel-raised);
+  padding: 4px 8px; font-size: 11px;
 }
-.action.primary { border-color: var(--wgg-accent); color: var(--wgg-accent); }
-.changes { display: grid; gap: 5px; }
+.action.primary { border-color: var(--wgg-accent); background: #0e639c; color: #fff; }
+.changes { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px 14px; }
 .change {
   width: 100%; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 7px; text-align: left;
-  padding: 7px 8px; border: 1px solid transparent; border-radius: 4px; background: transparent;
+  padding: 4px 3px; border: 1px solid transparent; border-radius: 0; background: transparent; font-size: 11px;
 }
-.change:hover { border-color: var(--wgg-line); background: var(--wgg-panel); }
-.change-code { font: 11px var(--wgg-mono); color: var(--wgg-warning); }
+.change:hover { background: var(--wgg-hover); }
+.change-code { font: 11px var(--wgg-mono); color: #4ec9b0; }
 .change-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stats { font: 10px var(--wgg-mono); color: var(--wgg-muted); }
 .patch {
@@ -160,12 +186,13 @@ select, .icon-button {
 .error { color: #ff8585; }
 .load-more { display: block; margin: 12px auto; }
 @media (max-width: 760px) {
-  .toolbar { grid-template-columns: 1fr auto; }
-  .brand span, .search { display: none; }
-  .header, .row { grid-template-columns: 112px minmax(200px, 1fr) 78px; }
+  .toolbar { gap: 8px; }
+  .remote-control, .repository-name, .search { display: none; }
+  .branch-control { flex: 1; }
+  .branch-control select { width: 100%; }
+  .header, .row { grid-template-columns: var(--wgg-graph-width) minmax(220px, 1fr) var(--wgg-commit-width); }
   .header > :nth-child(3), .header > :nth-child(4), .row > :nth-child(3), .row > :nth-child(4) { display: none; }
-  .body.drawer-open { grid-template-columns: 1fr; }
-  .drawer { position: absolute; inset: 45px 0 0 15%; z-index: 4; box-shadow: -20px 0 45px #0008; }
+  .body.drawer-open { grid-template-rows: minmax(120px, 1fr) minmax(220px, 50%); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
@@ -225,8 +252,9 @@ export class WebGitGraphElement extends HTMLElementBase {
   #loadingMore = false;
   #error?: string;
   #abort?: AbortController;
-  #rowHeight = 42;
+  #rowHeight = 24;
   #overscan = 8;
+  #showRemoteRefs = true;
   #root: ShadowRoot;
 
   constructor() {
@@ -241,7 +269,7 @@ export class WebGitGraphElement extends HTMLElementBase {
   }
 
   attributeChangedCallback(): void {
-    this.#rowHeight = this.getAttribute("density") === "compact" ? 34 : 42;
+    this.#rowHeight = this.getAttribute("density") === "compact" ? 20 : 24;
     this.#renderWindow();
   }
 
@@ -391,17 +419,24 @@ export class WebGitGraphElement extends HTMLElementBase {
     const repositoryName = this.#page.repositoryName ?? this.#page.repositoryId ?? "data provider";
     shell.innerHTML = `
       <div class="toolbar">
-        <div class="brand"><strong>Web Git Graph</strong><span></span></div>
-        <input class="search" type="search" placeholder="Search commits, authors, SHA…" aria-label="Search commits">
+        <div class="branch-control">
+          <strong>Branches:</strong>
+          <select class="ref-select" aria-label="Select branch or tag"><option value="">Show All</option></select>
+        </div>
+        <label class="remote-control">
+          <input class="remote-toggle" type="checkbox" checked>
+          <span>Show Remote Branches</span>
+        </label>
+        <span class="repository-name"></span>
         <div class="tools">
-          <select class="ref-select" aria-label="Select branch or tag"><option value="">All loaded refs</option></select>
+          <input class="search" type="search" placeholder="Find commits…" aria-label="Search commits">
           <button class="icon-button theme-toggle" type="button" aria-label="Toggle theme">◐</button>
         </div>
       </div>
       <div class="body">
         <section class="history">
           <div class="header" aria-hidden="true">
-            <span>Graph / refs</span><span>Description</span><span>Author</span><span>Date</span><span>SHA</span>
+            <span>Graph</span><span>Description</span><span>Date</span><span>Author</span><span>Commit</span>
           </div>
           <div class="scroller" role="treegrid" aria-label="Git commit history" tabindex="0">
             <div class="spacer"><div class="window"></div></div>
@@ -410,7 +445,7 @@ export class WebGitGraphElement extends HTMLElementBase {
         <aside class="drawer" aria-label="Commit details"></aside>
       </div>`;
 
-    shell.querySelector<HTMLElement>(".brand span")!.textContent = repositoryName;
+    shell.querySelector<HTMLElement>(".repository-name")!.textContent = repositoryName;
     const search = shell.querySelector<HTMLInputElement>(".search")!;
     search.value = this.#search;
     search.addEventListener("input", () => {
@@ -420,11 +455,19 @@ export class WebGitGraphElement extends HTMLElementBase {
     shell.querySelector(".theme-toggle")?.addEventListener("click", () => {
       this.theme = this.theme === "light" ? "dark" : "light";
     });
+    const remoteToggle = shell.querySelector<HTMLInputElement>(".remote-toggle")!;
+    remoteToggle.checked = this.#showRemoteRefs;
+    remoteToggle.addEventListener("change", () => {
+      this.#showRemoteRefs = remoteToggle.checked;
+      this.#renderWindow();
+    });
     const refSelect = shell.querySelector<HTMLSelectElement>(".ref-select")!;
-    for (const ref of this.#page.refs.filter((item) => item.kind === "head" || item.kind === "tag")) {
+    for (const ref of this.#page.refs.filter(
+      (item) => item.kind === "head" || item.kind === "tag" || item.kind === "remote"
+    )) {
       const option = document.createElement("option");
       option.value = ref.name;
-      option.textContent = `${ref.kind === "tag" ? "tag" : "branch"} · ${ref.name}`;
+      option.textContent = ref.name.replace(/^refs\/(heads|tags|remotes)\//, "");
       refSelect.append(option);
     }
     refSelect.addEventListener("change", () => void this.#load(false, refSelect.value || undefined));
@@ -468,7 +511,9 @@ export class WebGitGraphElement extends HTMLElementBase {
       return;
     }
 
-    spacer.style.height = `${this.#filteredCommits.length * this.#rowHeight + (this.#page.hasMore ? 54 : 0)}px`;
+    const graphWidth = Math.max(56, this.#layout.laneCount * 16 + 24);
+    this.#root.querySelector<HTMLElement>(".shell")?.style.setProperty("--wgg-graph-width", `${graphWidth}px`);
+    spacer.style.height = `${this.#filteredCommits.length * this.#rowHeight + (this.#page.hasMore ? 42 : 0)}px`;
     const visibleRows = Math.ceil(Math.max(scroller.clientHeight, 420) / this.#rowHeight);
     const start = Math.max(0, Math.floor(scroller.scrollTop / this.#rowHeight) - this.#overscan);
     const end = Math.min(this.#filteredCommits.length, start + visibleRows + this.#overscan * 2);
@@ -477,7 +522,7 @@ export class WebGitGraphElement extends HTMLElementBase {
 
     const svg = svgElement("svg", {
       class: "graph",
-      width: `${Math.max(160, this.#layout.laneCount * 18 + 28)}`,
+      width: `${graphWidth}`,
       height: `${(end - start) * this.#rowHeight}`,
       "aria-hidden": "true"
     });
@@ -486,14 +531,18 @@ export class WebGitGraphElement extends HTMLElementBase {
 
     const refsByTarget = new Map<string, GitGraphRef[]>();
     for (const ref of this.#page.refs) {
+      if (!this.#showRemoteRefs && ref.kind === "remote") continue;
       const existing = refsByTarget.get(ref.target) ?? [];
       existing.push(ref);
       refsByTarget.set(ref.target, existing);
     }
+    const nodesByOid = new Map(this.#layout.nodes.map((node) => [node.oid, node]));
     for (let index = start; index < end; index += 1) {
       const commit = this.#filteredCommits[index]!;
       const row = document.createElement("div");
       row.className = "row";
+      row.classList.toggle("merge", commit.parents.length > 1);
+      row.classList.toggle("working-tree", commit.kind === "working-tree");
       if (commit.oid === this.#selectedOid) row.classList.add("selected");
       if (commit.oid === this.#compareOid) row.classList.add("compare");
       row.dataset.oid = commit.oid;
@@ -503,19 +552,29 @@ export class WebGitGraphElement extends HTMLElementBase {
       row.innerHTML = `
         <div class="graph-cell" role="gridcell"></div>
         <div class="subject" role="gridcell"><div class="refs"></div><span class="message"></span></div>
-        <div class="author" role="gridcell"></div>
         <div class="date" role="gridcell"></div>
+        <div class="author" role="gridcell"></div>
         <div class="oid" role="gridcell"></div>`;
       row.querySelector<HTMLElement>(".message")!.textContent = commit.message.split("\n", 1)[0] ?? "";
       row.querySelector<HTMLElement>(".author")!.textContent = commit.author?.name ?? "—";
       row.querySelector<HTMLElement>(".date")!.textContent = formatDate(commit.committedAt ?? commit.authoredAt);
       row.querySelector<HTMLElement>(".oid")!.textContent = shortOid(commit.oid);
       const refs = row.querySelector<HTMLElement>(".refs")!;
-      for (const ref of (refsByTarget.get(commit.oid) ?? []).slice(0, 3)) {
+      const seenLabels = new Set<string>();
+      for (const ref of refsByTarget.get(commit.oid) ?? []) {
+        const label = ref.name.replace(/^refs\/(heads|tags|remotes)\//, "");
+        const dedupeKey = ref.kind === "current" || ref.kind === "head" ? `branch:${label}` : `${ref.kind}:${label}`;
+        if (seenLabels.has(dedupeKey)) continue;
+        seenLabels.add(dedupeKey);
         const badge = document.createElement("span");
         badge.className = `ref ${ref.kind}`;
-        badge.textContent = ref.name.replace(/^refs\/(heads|tags|remotes)\//, "");
+        const prefix =
+          ref.kind === "tag" ? "◇" : ref.kind === "stash" ? "≋" : ref.kind === "remote" ? "↗" : "⑂";
+        badge.textContent = `${prefix} ${label}`;
+        const node = nodesByOid.get(commit.oid);
+        if (node) badge.style.setProperty("--ref-color", PALETTE[node.colour % PALETTE.length]!);
         refs.append(badge);
+        if (seenLabels.size >= 4) break;
       }
       row.addEventListener("click", (event) => {
         if ((event.metaKey || event.ctrlKey) && this.#selectedOid && this.#selectedOid !== commit.oid) {
@@ -557,7 +616,7 @@ export class WebGitGraphElement extends HTMLElementBase {
   }
 
   #drawGraph(svg: SVGSVGElement, start: number, end: number): void {
-    const x = (lane: number) => 18 + lane * 18;
+    const x = (lane: number) => 16 + lane * 16;
     const y = (row: number) => (row - start + 0.5) * this.#rowHeight;
     for (const segment of this.#layout.segments) {
       if (segment.to.row < start || segment.from.row >= end) continue;
@@ -581,13 +640,13 @@ export class WebGitGraphElement extends HTMLElementBase {
     }
     for (const node of this.#layout.nodes) {
       if (node.row < start || node.row >= end) continue;
-      const colour = PALETTE[node.colour % PALETTE.length]!;
+      const colour = node.kind === "working-tree" ? "var(--wgg-faint)" : PALETTE[node.colour % PALETTE.length]!;
       svg.append(
         svgElement("circle", {
           cx: `${x(node.lane)}`,
           cy: `${y(node.row)}`,
-          r: node.kind === "working-tree" ? "5" : node.kind === "stash" ? "4.5" : "4",
-          fill: node.oid === this.#page.head ? "var(--wgg-bg)" : colour,
+          r: node.kind === "working-tree" ? "4.5" : node.kind === "stash" ? "4" : "3.5",
+          fill: node.oid === this.#page.head || node.kind === "working-tree" ? "var(--wgg-bg)" : colour,
           stroke: colour
         })
       );
