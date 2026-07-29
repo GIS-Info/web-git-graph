@@ -90,11 +90,9 @@ select, .icon-button {
 .icon-button { min-width: 28px; color: var(--wgg-muted); background: transparent; border-color: transparent; }
 .icon-button:hover { color: var(--wgg-ink); background: var(--wgg-hover); }
 .body {
-  min-height: 0; position: relative; display: grid; grid-template-rows: minmax(0, 1fr) 0;
-  transition: grid-template-rows 120ms ease;
+  min-height: 0; position: relative;
 }
-.body.drawer-open { grid-template-rows: minmax(150px, 1fr) minmax(190px, 42%); }
-.history { min-width: 0; display: grid; grid-template-rows: 34px minmax(0, 1fr); }
+.history { min-width: 0; height: 100%; display: grid; grid-template-rows: 34px minmax(0, 1fr); }
 .header, .row {
   display: grid;
   grid-template-columns:
@@ -112,11 +110,11 @@ select, .icon-button {
 }
 .scroller { position: relative; overflow: auto; min-height: 0; outline: none; scrollbar-color: var(--wgg-faint) transparent; }
 .spacer { position: relative; min-width: 720px; }
-.window { position: absolute; inset: 0 0 auto 0; }
+.window { position: absolute; inset: 0 0 auto 0; min-height: 100%; }
 .row {
   height: var(--wgg-row-height); padding-right: 10px;
   border-bottom: 1px solid color-mix(in srgb, var(--wgg-line) 30%, transparent);
-  position: relative; cursor: default; font-size: 12px;
+  position: absolute; left: 0; right: 0; cursor: default; font-size: 12px;
 }
 .row:hover, .row.preview { background: var(--wgg-hover); }
 .row.selected { background: var(--wgg-selected); }
@@ -148,17 +146,19 @@ select, .icon-button {
 }
 .graph path { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; }
 .graph circle { stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-.drawer {
-  min-height: 0; overflow: auto; background: var(--wgg-panel); border-top: 1px solid var(--wgg-line);
-  opacity: 0; pointer-events: none; transform: translateY(6px); transition: opacity 100ms ease, transform 100ms ease;
+.inline-details {
+  position: absolute; left: 0; right: 0; z-index: 3; overflow: auto;
+  background: var(--wgg-panel); border-top: 1px solid var(--wgg-accent);
+  border-bottom: 1px solid var(--wgg-line);
+  box-shadow: 0 8px 18px color-mix(in srgb, #000 24%, transparent);
+  animation: details-open 120ms ease-out;
 }
-.drawer-open .drawer { opacity: 1; pointer-events: auto; transform: none; }
-.drawer-head {
+.details-head {
   position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center;
   height: 30px; padding: 0 8px; background: var(--wgg-panel-raised); border-bottom: 1px solid var(--wgg-line);
 }
-.drawer-title { font-size: 12px; font-weight: 600; }
-.drawer-content { padding: 10px 14px 16px; }
+.details-title { font-size: 12px; font-weight: 600; }
+.details-content { padding: 10px 14px 16px; }
 .commit-title { margin: 0 0 8px; font-size: 13px; line-height: 1.3; font-weight: 600; }
 .meta { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 4px 8px; color: var(--wgg-muted); font-size: 11px; }
 .meta dt { color: var(--wgg-faint); }
@@ -184,7 +184,11 @@ select, .icon-button {
 }
 .empty, .loading, .error { display: grid; place-items: center; min-height: 220px; color: var(--wgg-muted); text-align: center; padding: 30px; }
 .error { color: #ff8585; }
-.load-more { display: block; margin: 12px auto; }
+.load-more { position: absolute; left: 50%; display: block; margin: 8px 0; transform: translateX(-50%); }
+@keyframes details-open {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 @media (max-width: 760px) {
   .toolbar { gap: 8px; }
   .remote-control, .repository-name, .search { display: none; }
@@ -192,7 +196,6 @@ select, .icon-button {
   .branch-control select { width: 100%; }
   .header, .row { grid-template-columns: var(--wgg-graph-width) minmax(220px, 1fr) var(--wgg-commit-width); }
   .header > :nth-child(3), .header > :nth-child(4), .row > :nth-child(3), .row > :nth-child(4) { display: none; }
-  .body.drawer-open { grid-template-rows: minmax(120px, 1fr) minmax(220px, 50%); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
@@ -254,6 +257,7 @@ export class WebGitGraphElement extends HTMLElementBase {
   #abort?: AbortController;
   #rowHeight = 24;
   #overscan = 8;
+  #detailsHeight = 240;
   #showRemoteRefs = true;
   #root: ShadowRoot;
 
@@ -354,7 +358,8 @@ export class WebGitGraphElement extends HTMLElementBase {
     );
     void this.#loadDetails(commit);
     this.#renderWindow();
-    this.#renderDrawer();
+    this.#renderDetailsPanel();
+    queueMicrotask(() => this.#centerDetails(commit.oid));
   }
 
   async compareCommits(baseOid: string, headOid: string): Promise<void> {
@@ -365,7 +370,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     this.#compareOid = headOid;
     this.#fileDiff = undefined;
     this.#renderWindow();
-    this.#renderDrawer(true);
+    this.#renderDetailsPanel(true);
     try {
       this.#comparison = await this.#provider.compare(
         this.#page.repositoryId,
@@ -382,14 +387,17 @@ export class WebGitGraphElement extends HTMLElementBase {
     } catch (error) {
       this.#emitError(error);
     }
-    this.#renderDrawer();
+    this.#renderDetailsPanel();
   }
 
   focusCommit(oid: string): void {
     const index = this.#filteredCommits.findIndex((commit) => commit.oid === oid);
     if (index < 0) return;
     const scroller = this.#root.querySelector<HTMLElement>(".scroller");
-    scroller?.scrollTo({ top: index * this.#rowHeight, behavior: "smooth" });
+    scroller?.scrollTo({
+      top: this.#rowTop(index, this.#selectedIndex()),
+      behavior: "smooth"
+    });
     queueMicrotask(() => {
       this.#root.querySelector<HTMLElement>(`.row[data-oid="${CSS.escape(oid)}"]`)?.focus();
     });
@@ -442,7 +450,6 @@ export class WebGitGraphElement extends HTMLElementBase {
             <div class="spacer"><div class="window"></div></div>
           </div>
         </section>
-        <aside class="drawer" aria-label="Commit details"></aside>
       </div>`;
 
     shell.querySelector<HTMLElement>(".repository-name")!.textContent = repositoryName;
@@ -484,7 +491,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     });
     scroller.addEventListener("keydown", (event) => this.#onKeyDown(event));
     this.#renderWindow();
-    this.#renderDrawer();
+    this.#renderDetailsPanel();
   }
 
   #renderWindow(): void {
@@ -513,20 +520,36 @@ export class WebGitGraphElement extends HTMLElementBase {
 
     const graphWidth = Math.max(56, this.#layout.laneCount * 16 + 24);
     this.#root.querySelector<HTMLElement>(".shell")?.style.setProperty("--wgg-graph-width", `${graphWidth}px`);
-    spacer.style.height = `${this.#filteredCommits.length * this.#rowHeight + (this.#page.hasMore ? 42 : 0)}px`;
+    const selectedIndex = this.#selectedIndex();
+    const detailsHeight = selectedIndex >= 0 ? this.#detailsHeight : 0;
+    const detailsTop = (selectedIndex + 1) * this.#rowHeight;
+    const contentHeight = this.#filteredCommits.length * this.#rowHeight + detailsHeight;
+    spacer.style.height = `${contentHeight + (this.#page.hasMore ? 42 : 0)}px`;
     const visibleRows = Math.ceil(Math.max(scroller.clientHeight, 420) / this.#rowHeight);
-    const start = Math.max(0, Math.floor(scroller.scrollTop / this.#rowHeight) - this.#overscan);
-    const end = Math.min(this.#filteredCommits.length, start + visibleRows + this.#overscan * 2);
-    windowElement.style.transform = `translateY(${start * this.#rowHeight}px)`;
+    const rowAtOffset = (offset: number): number => {
+      if (selectedIndex < 0 || offset < detailsTop) return Math.floor(offset / this.#rowHeight);
+      if (offset < detailsTop + detailsHeight) return selectedIndex;
+      return Math.floor((offset - detailsHeight) / this.#rowHeight);
+    };
+    const start = Math.max(0, rowAtOffset(scroller.scrollTop) - this.#overscan);
+    const end = Math.min(
+      this.#filteredCommits.length,
+      Math.max(start + visibleRows, rowAtOffset(scroller.scrollTop + scroller.clientHeight) + 1) +
+        this.#overscan
+    );
+    windowElement.style.transform = "";
     windowElement.replaceChildren();
 
+    const graphTop = this.#rowTop(start, selectedIndex);
+    const graphHeight = Math.max(this.#rowHeight, this.#rowTop(end, selectedIndex) - graphTop);
     const svg = svgElement("svg", {
       class: "graph",
       width: `${graphWidth}`,
-      height: `${(end - start) * this.#rowHeight}`,
+      height: `${graphHeight}`,
       "aria-hidden": "true"
     });
-    this.#drawGraph(svg, start, end);
+    svg.style.top = `${graphTop}px`;
+    this.#drawGraph(svg, start, end, selectedIndex);
     windowElement.append(svg);
 
     const refsByTarget = new Map<string, GitGraphRef[]>();
@@ -549,6 +572,7 @@ export class WebGitGraphElement extends HTMLElementBase {
       row.dataset.index = String(index);
       row.setAttribute("role", "row");
       row.tabIndex = commit.oid === this.#selectedOid || (!this.#selectedOid && index === 0) ? 0 : -1;
+      row.style.top = `${this.#rowTop(index, selectedIndex)}px`;
       row.innerHTML = `
         <div class="graph-cell" role="gridcell"></div>
         <div class="subject" role="gridcell"><div class="refs"></div><span class="message"></span></div>
@@ -596,10 +620,20 @@ export class WebGitGraphElement extends HTMLElementBase {
       windowElement.append(row);
     }
 
+    if (selectedIndex >= 0) {
+      const details = document.createElement("aside");
+      details.className = "inline-details";
+      details.setAttribute("aria-label", this.#compareOid ? "Commit comparison" : "Commit details");
+      details.style.top = `${detailsTop}px`;
+      details.style.height = `${detailsHeight}px`;
+      windowElement.append(details);
+    }
+
     if (this.#page.hasMore && end === this.#filteredCommits.length) {
       const button = document.createElement("button");
       button.className = "action load-more";
       button.type = "button";
+      button.style.top = `${contentHeight}px`;
       button.textContent = this.#loadingMore ? "Loading…" : "Load more commits";
       button.disabled = this.#loadingMore;
       button.addEventListener("click", () => {
@@ -613,11 +647,15 @@ export class WebGitGraphElement extends HTMLElementBase {
       });
       windowElement.append(button);
     }
+    this.#renderDetailsPanel();
   }
 
-  #drawGraph(svg: SVGSVGElement, start: number, end: number): void {
+  #drawGraph(svg: SVGSVGElement, start: number, end: number, selectedIndex: number): void {
     const x = (lane: number) => 16 + lane * 16;
-    const y = (row: number) => (row - start + 0.5) * this.#rowHeight;
+    const y = (row: number) =>
+      this.#rowTop(row, selectedIndex) -
+      this.#rowTop(start, selectedIndex) +
+      this.#rowHeight * 0.5;
     for (const segment of this.#layout.segments) {
       if (segment.to.row < start || segment.from.row >= end) continue;
       const fromRow = Math.max(start, segment.from.row);
@@ -666,7 +704,7 @@ export class WebGitGraphElement extends HTMLElementBase {
       this.selectCommit(active.dataset.oid);
       return;
     } else if (event.key === "Escape") {
-      this.#closeDrawer();
+      this.#closeDetails();
       return;
     } else return;
     event.preventDefault();
@@ -676,37 +714,33 @@ export class WebGitGraphElement extends HTMLElementBase {
   async #loadDetails(commit: GitGraphCommit): Promise<void> {
     if (!this.#provider?.getCommitDetails) {
       this.#details = { commit, refs: this.#page.refs.filter((ref) => ref.target === commit.oid), changes: [] };
-      this.#renderDrawer();
+      this.#renderDetailsPanel();
       return;
     }
-    this.#renderDrawer(true);
+    this.#renderDetailsPanel(true);
     try {
-      this.#details = await this.#provider.getCommitDetails(
+      const details = await this.#provider.getCommitDetails(
         this.#page.repositoryId,
         revisionFor(commit)
       );
+      if (this.#selectedOid !== commit.oid) return;
+      this.#details = details;
     } catch (error) {
+      if (this.#selectedOid !== commit.oid) return;
       this.#emitError(error);
     }
-    this.#renderDrawer();
+    this.#renderDetailsPanel();
   }
 
-  #renderDrawer(waiting = false): void {
-    const body = this.#root.querySelector<HTMLElement>(".body");
-    const drawer = this.#root.querySelector<HTMLElement>(".drawer");
-    if (!body || !drawer) return;
-    if (!this.#selectedOid) {
-      body.classList.remove("drawer-open");
-      drawer.replaceChildren();
-      return;
-    }
-    body.classList.add("drawer-open");
-    drawer.innerHTML = `
-      <div class="drawer-head"><span class="drawer-title"></span><button class="icon-button close" type="button" aria-label="Close details">×</button></div>
-      <div class="drawer-content"></div>`;
-    drawer.querySelector(".close")?.addEventListener("click", () => this.#closeDrawer());
-    const title = drawer.querySelector<HTMLElement>(".drawer-title")!;
-    const content = drawer.querySelector<HTMLElement>(".drawer-content")!;
+  #renderDetailsPanel(waiting = false): void {
+    const details = this.#root.querySelector<HTMLElement>(".inline-details");
+    if (!details || !this.#selectedOid) return;
+    details.innerHTML = `
+      <div class="details-head"><span class="details-title"></span><button class="icon-button close" type="button" aria-label="Close details">×</button></div>
+      <div class="details-content"></div>`;
+    details.querySelector(".close")?.addEventListener("click", () => this.#closeDetails());
+    const title = details.querySelector<HTMLElement>(".details-title")!;
+    const content = details.querySelector<HTMLElement>(".details-content")!;
     if (this.#compareOid) {
       title.textContent = "Commit comparison";
       if (waiting || !this.#comparison) {
@@ -826,7 +860,7 @@ export class WebGitGraphElement extends HTMLElementBase {
         } catch (error) {
           this.#emitError(error);
         }
-        this.#renderDrawer();
+        this.#renderDetailsPanel();
       });
       list.append(button);
     }
@@ -838,14 +872,37 @@ export class WebGitGraphElement extends HTMLElementBase {
     return shortOid(revision.oid);
   }
 
-  #closeDrawer(): void {
+  #closeDetails(): void {
     this.#selectedOid = undefined;
     this.#compareOid = undefined;
     this.#details = undefined;
     this.#comparison = undefined;
     this.#fileDiff = undefined;
     this.#renderWindow();
-    this.#renderDrawer();
+    this.#renderDetailsPanel();
+  }
+
+  #selectedIndex(): number {
+    if (!this.#selectedOid) return -1;
+    return this.#filteredCommits.findIndex((commit) => commit.oid === this.#selectedOid);
+  }
+
+  #rowTop(index: number, selectedIndex: number): number {
+    return (
+      index * this.#rowHeight +
+      (selectedIndex >= 0 && index > selectedIndex ? this.#detailsHeight : 0)
+    );
+  }
+
+  #centerDetails(oid: string): void {
+    if (this.#selectedOid !== oid) return;
+    const selectedIndex = this.#selectedIndex();
+    const scroller = this.#root.querySelector<HTMLElement>(".scroller");
+    if (selectedIndex < 0 || !scroller) return;
+    const blockTop = selectedIndex * this.#rowHeight;
+    const blockHeight = this.#rowHeight + this.#detailsHeight;
+    const target = blockTop - Math.max(0, (scroller.clientHeight - blockHeight) / 2);
+    scroller.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
   }
 
   async #load(append: boolean, ref?: string): Promise<void> {

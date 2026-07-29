@@ -7,9 +7,25 @@ test("renders the graph and opens commit details", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /commit dag/i })).toBeVisible();
 
   const firstRow = graph.locator(".row").first();
+  const secondRow = graph.locator(".row").nth(1);
   await firstRow.click();
-  await expect(graph.locator(".drawer-title")).toHaveText("Commit details");
+  const details = graph.locator(".inline-details");
+  await expect(details).toBeVisible();
+  await expect(graph.locator(".details-title")).toHaveText("Commit details");
   await expect(graph.locator(".commit-title")).toContainText("Merge release");
+  await page.waitForTimeout(150);
+
+  const firstBox = await firstRow.boundingBox();
+  const detailsBox = await details.boundingBox();
+  const secondBox = await secondRow.boundingBox();
+  expect(firstBox).not.toBeNull();
+  expect(detailsBox).not.toBeNull();
+  expect(secondBox).not.toBeNull();
+  expect(Math.abs(detailsBox!.y - (firstBox!.y + firstBox!.height))).toBeLessThanOrEqual(1);
+  expect(Math.abs(secondBox!.y - (detailsBox!.y + detailsBox!.height))).toBeLessThanOrEqual(1);
+
+  await graph.getByRole("button", { name: "Close details" }).click();
+  await expect(details).toHaveCount(0);
 });
 
 test("filters commits and switches theme", async ({ page }) => {
