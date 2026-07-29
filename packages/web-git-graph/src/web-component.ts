@@ -144,7 +144,7 @@ select, .icon-button {
 .date, .author { text-align: center; }
 .oid { font-family: var(--wgg-mono); font-size: 11px; text-align: center; }
 .graph {
-  position: absolute; pointer-events: none; overflow: visible;
+  position: absolute; z-index: 1; pointer-events: none; overflow: visible;
 }
 .graph path { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; }
 .graph circle { stroke-width: 1.5; vector-effect: non-scaling-stroke; }

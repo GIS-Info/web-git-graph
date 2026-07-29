@@ -22,3 +22,25 @@ test("filters commits and switches theme", async ({ page }) => {
   await graph.locator(".theme-toggle").click();
   await expect(graph).toHaveAttribute("theme", "light");
 });
+
+test("keeps graph lanes visible while a commit row is hovered", async ({ page }) => {
+  await page.goto("/web-git-graph/");
+  const graph = page.locator("web-git-graph");
+  const row = graph.locator(".row").nth(1);
+  const node = graph.locator(".graph circle").nth(1);
+  await row.scrollIntoViewIfNeeded();
+  const box = await node.boundingBox();
+  expect(box).not.toBeNull();
+
+  const clip = {
+    x: Math.floor(box!.x + box!.width / 2),
+    y: Math.floor(box!.y + box!.height / 2),
+    width: 1,
+    height: 1
+  };
+  const before = await page.screenshot({ clip });
+  await row.hover();
+  const after = await page.screenshot({ clip });
+
+  expect(after.equals(before)).toBe(true);
+});
