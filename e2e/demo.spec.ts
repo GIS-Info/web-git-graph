@@ -60,3 +60,14 @@ test("keeps graph lanes visible while a commit row is hovered", async ({ page })
 
   expect(after.equals(before)).toBe(true);
 });
+
+test("connects the demo to the local Node backend through HTTP", async ({ page }) => {
+  await page.goto(
+    "/web-git-graph/?backend=http://127.0.0.1:4174&repository=local"
+  );
+  const graph = page.locator("web-git-graph");
+
+  await expect(page.locator("#status")).toContainText("127.0.0.1:4174");
+  await expect(graph.locator(".row").first()).toBeVisible();
+  await expect(graph.locator(".oid").first()).not.toHaveText("");
+});

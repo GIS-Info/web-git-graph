@@ -1,8 +1,14 @@
 import "@fontsource-variable/archivo";
 import "@fontsource-variable/recursive";
-import "web-git-graph/register";
-import { GitHubGitGraphProvider } from "web-git-graph/providers/github";
-import type { GitGraphCommit, GitGraphPage, GitGraphRef, WebGitGraphElement } from "web-git-graph";
+import "@web-git-graph/web/register";
+import { GitHubGitGraphProvider } from "@web-git-graph/web/providers/github";
+import { HttpGitGraphProvider } from "@web-git-graph/web/providers/http";
+import type {
+  GitGraphCommit,
+  GitGraphPage,
+  GitGraphRef
+} from "@web-git-graph/protocol";
+import type { WebGitGraphElement } from "@web-git-graph/web";
 import "./style.css";
 
 const graph = document.querySelector<WebGitGraphElement>("#graph")!;
@@ -43,6 +49,17 @@ const fixture: GitGraphPage = {
 
 graph.data = fixture;
 
+const query = new URLSearchParams(window.location.search);
+const backendUrl = query.get("backend");
+if (backendUrl) {
+  const repositoryId = query.get("repository") ?? "local";
+  graph.provider = new HttpGitGraphProvider({
+    baseUrl: backendUrl,
+    repositoryId
+  });
+  status.textContent = `Connected to ${backendUrl} · repository ${repositoryId}`;
+}
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const repository = repositoryInput.value.trim();
@@ -63,7 +80,9 @@ form.addEventListener("submit", async (event) => {
 });
 
 document.querySelector("#copy-install")?.addEventListener("click", async (event) => {
-  await navigator.clipboard.writeText("npm i web-git-graph");
+  await navigator.clipboard.writeText(
+    "npm i @web-git-graph/web @web-git-graph/protocol"
+  );
   (event.currentTarget as HTMLButtonElement).textContent = "COPIED";
 });
 

@@ -9,9 +9,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@web-git-graph/protocol": "workspace:*",
+    "@web-git-graph/web": "workspace:*",
     "@fontsource-variable/archivo": "^5.2.6",
-    "@fontsource-variable/recursive": "^5.2.6",
-    "web-git-graph": "workspace:*"
+    "@fontsource-variable/recursive": "^5.2.6"
   },
   "devDependencies": {
     "typescript": "^5.9.2",

@@ -6,9 +6,17 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:4173",
     viewport: { width: 1440, height: 1000 }
   },
-  webServer: {
-    command: "pnpm --filter @web-git-graph/demo dev --host 127.0.0.1 --port 4173",
-    url: "http://127.0.0.1:4173/web-git-graph/",
-    reuseExistingServer: true
-  }
+  webServer: [
+    {
+      command: "pnpm --filter @web-git-graph/demo dev --host 127.0.0.1 --port 4173",
+      url: "http://127.0.0.1:4173/web-git-graph/",
+      reuseExistingServer: true
+    },
+    {
+      command:
+        "pnpm --filter @web-git-graph/node build && node packages/node/dist/cli.js serve --repo . --port 4174 --cors-origin http://127.0.0.1:4173",
+      url: "http://127.0.0.1:4174/v1/capabilities",
+      reuseExistingServer: true
+    }
+  ]
 });

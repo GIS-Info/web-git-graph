@@ -7,16 +7,18 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "pnpm --filter web-git-graph build && pnpm --filter @web-git-graph/demo build",
+    "build": "pnpm -r --if-present build",
+    "check:boundaries": "node scripts/check-module-boundaries.mjs",
     "dev": "pnpm --filter @web-git-graph/demo dev",
-    "lint": "pnpm --filter web-git-graph lint",
-    "test": "pnpm --filter web-git-graph test",
+    "lint": "pnpm check:boundaries && pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test && vitest run integration",
     "test:e2e": "playwright test",
     "typecheck": "pnpm -r typecheck",
-    "pack:check": "pnpm --filter web-git-graph pack:check"
+    "pack:check": "pnpm --filter @web-git-graph/protocol pack:check && pnpm --filter @web-git-graph/web pack:check && pnpm --filter @web-git-graph/node pack:check"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
   }
 }

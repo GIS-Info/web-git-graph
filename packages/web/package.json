@@ -1,0 +1,65 @@
+{
+  "name": "@web-git-graph/web",
+  "version": "0.1.0",
+  "description": "Framework-free Git history graph Web Component and browser providers.",
+  "type": "module",
+  "license": "MIT",
+  "author": "kian-zh",
+  "homepage": "https://github.com/kian-zh/web-git-graph",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kian-zh/web-git-graph.git",
+    "directory": "packages/web"
+  },
+  "sideEffects": [
+    "./dist/register.js"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./register": {
+      "types": "./dist/register.d.ts",
+      "import": "./dist/register.js",
+      "require": "./dist/register.cjs"
+    },
+    "./providers/github": {
+      "types": "./dist/providers/github.d.ts",
+      "import": "./dist/providers/github.js",
+      "require": "./dist/providers/github.cjs"
+    },
+    "./providers/http": {
+      "types": "./dist/providers/http.d.ts",
+      "import": "./dist/providers/http.js",
+      "require": "./dist/providers/http.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "pack:check": "pnpm build && npm pack --dry-run --cache .npm-cache"
+  },
+  "dependencies": {
+    "@web-git-graph/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

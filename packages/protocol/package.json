@@ -1,0 +1,49 @@
+{
+  "name": "@web-git-graph/protocol",
+  "version": "0.1.0",
+  "description": "Transport-neutral DTOs, schemas and error semantics for Web Git Graph.",
+  "type": "module",
+  "license": "MIT",
+  "author": "kian-zh",
+  "homepage": "https://github.com/kian-zh/web-git-graph",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kian-zh/web-git-graph.git",
+    "directory": "packages/protocol"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./http": {
+      "types": "./dist/http.d.ts",
+      "import": "./dist/http.js",
+      "require": "./dist/http.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "pack:check": "pnpm build && npm pack --dry-run --cache .npm-cache"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "name": "@web-git-graph/vscode",
+  "displayName": "Web Git Graph",
+  "version": "0.1.0",
+  "description": "VS Code host for the Web Git Graph renderer and local Git backend.",
+  "type": "module",
+  "license": "MIT",
+  "publisher": "kian-zh",
+  "engines": {
+    "vscode": "^1.95.0",
+    "node": ">=20"
+  },
+  "categories": [
+    "SCM Providers",
+    "Visualization"
+  ],
+  "activationEvents": [
+    "onCommand:webGitGraph.open"
+  ],
+  "main": "./dist/extension/extension.cjs",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "webGitGraph.open",
+        "title": "Web Git Graph: Open Graph",
+        "category": "Web Git Graph"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsup",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "pack:check": "pnpm build && npm pack --dry-run --cache .npm-cache"
+  },
+  "dependencies": {
+    "@web-git-graph/node": "workspace:*",
+    "@web-git-graph/protocol": "workspace:*",
+    "@web-git-graph/web": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "private": true
+}

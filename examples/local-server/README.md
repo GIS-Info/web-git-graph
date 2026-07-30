@@ -9,7 +9,7 @@ import { createServer } from "node:http";
 import {
   LocalGitBackend,
   createGitGraphNodeHandler
-} from "web-git-graph/node";
+} from "@web-git-graph/node";
 
 const backend = new LocalGitBackend({
   repositories: { project: "/srv/repos/project" },
@@ -23,7 +23,7 @@ createServer(createGitGraphNodeHandler({ backend })).listen(4000);
 
 Express requests and responses extend Node's `IncomingMessage` and
 `ServerResponse`, so the same handler can be mounted without an Express runtime
-dependency in `web-git-graph`.
+dependency in `@web-git-graph/node`.
 
 ```ts
 const handler = createGitGraphNodeHandler({ backend });
@@ -46,7 +46,7 @@ fastify.all("/v1/*", async (request, reply) => {
 ## Next.js Route Handler / Hono / Bun
 
 ```ts
-import { createGitGraphFetchHandler } from "web-git-graph/node";
+import { createGitGraphFetchHandler } from "@web-git-graph/node";
 
 const handler = createGitGraphFetchHandler({ backend });
 export const GET = handler;
