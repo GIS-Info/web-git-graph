@@ -80,10 +80,8 @@ form.addEventListener("submit", async (event) => {
 });
 
 document.querySelector("#copy-install")?.addEventListener("click", async (event) => {
-  await navigator.clipboard.writeText(
-    "npm i @web-git-graph/web @web-git-graph/protocol"
-  );
-  (event.currentTarget as HTMLButtonElement).textContent = "COPIED";
+  await navigator.clipboard.writeText("npm i @web-git-graph/web");
+  (event.currentTarget as HTMLButtonElement).textContent = "Copied";
 });
 
 function commit(
