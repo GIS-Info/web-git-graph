@@ -18,8 +18,9 @@ test("renders the graph and opens commit details", async ({ page }) => {
   await firstRow.click();
   const details = graph.locator(".inline-details");
   await expect(details).toBeVisible();
-  await expect(graph.locator(".details-title")).toHaveText("Commit details");
-  await expect(graph.locator(".commit-title")).toContainText("Merge release");
+  await expect(details.locator(".meta")).toContainText("a91de840");
+  await expect(details.locator(".commit-body")).toContainText("Merge release");
+  await expect(details.locator(".details-files")).toContainText("No file changes");
   await page.waitForTimeout(150);
 
   const firstBox = await firstRow.boundingBox();
@@ -75,6 +76,12 @@ test("connects the demo to the local Node backend through HTTP", async ({ page }
   const graph = page.locator("web-git-graph");
 
   await expect(page.locator("#status")).toContainText("127.0.0.1:4174");
-  await expect(graph.locator(".row").first()).toBeVisible();
+  // The exact repository name proves the backend page replaced the demo
+  // fixture ("web-git-graph / protocol-lab") instead of silently failing.
+  await expect(graph.locator(".repository-name")).toHaveText("web-git-graph");
   await expect(graph.locator(".oid").first()).not.toHaveText("");
+
+  await graph.locator(".row").nth(1).click();
+  await expect(graph.locator(".inline-details .meta")).toContainText("Commit");
+  await expect(graph.locator(".inline-details .tree-file").first()).toBeVisible();
 });

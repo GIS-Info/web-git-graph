@@ -1,5 +1,6 @@
 import { layoutGitGraph, type GitGraphLayout } from "./layout";
 import type {
+  GitGraphChange,
   GitGraphCommit,
   GitGraphCommitDetails,
   GitGraphComparison,
@@ -142,52 +143,71 @@ select, .icon-button {
 .date, .author { text-align: center; }
 .oid { font-family: var(--wgg-mono); font-size: 11px; text-align: center; }
 .graph {
-  position: absolute; z-index: 1; pointer-events: none; overflow: visible;
+  position: absolute; z-index: 4; pointer-events: none; overflow: visible;
 }
 .graph path { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; }
 .graph circle { stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .inline-details {
-  position: absolute; left: 0; right: 0; z-index: 3; overflow: auto;
-  background: var(--wgg-panel); border-top: 1px solid var(--wgg-accent);
-  border-bottom: 1px solid var(--wgg-line);
-  box-shadow: 0 8px 18px color-mix(in srgb, #000 24%, transparent);
+  position: absolute; left: 0; right: 0; z-index: 3;
+  display: flex; overflow: hidden;
+  padding-left: var(--wgg-graph-width);
+  background: var(--wgg-panel);
+  border-top: 1px solid var(--wgg-line); border-bottom: 1px solid var(--wgg-line);
+  font-size: 12px;
   animation: details-open 120ms ease-out;
 }
-.details-head {
-  position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center;
-  height: 30px; padding: 0 8px; background: var(--wgg-panel-raised); border-bottom: 1px solid var(--wgg-line);
+.details-summary { flex: 1 1 55%; min-width: 0; overflow: auto; padding: 8px 12px 12px; }
+.details-files {
+  flex: 1 1 45%; min-width: 0; overflow: auto; padding: 5px 26px 8px 8px;
+  border-left: 1px solid var(--wgg-line);
 }
-.details-title { font-size: 12px; font-weight: 600; }
-.details-content { padding: 10px 14px 16px; }
-.commit-title { margin: 0 0 8px; font-size: 13px; line-height: 1.3; font-weight: 600; }
-.meta { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 4px 8px; color: var(--wgg-muted); font-size: 11px; }
-.meta dt { color: var(--wgg-faint); }
+.details-close {
+  position: absolute; top: 3px; right: 5px; z-index: 1;
+  width: 22px; height: 22px; padding: 0; border: 0; border-radius: 2px;
+  background: transparent; color: var(--wgg-muted); font-size: 14px; line-height: 1;
+}
+.details-close:hover { background: var(--wgg-hover); color: var(--wgg-ink); }
+.details-heading { margin: 0 0 6px; font-size: 12px; font-weight: 600; }
+.meta { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 10px; margin: 0; }
+.meta dt { color: var(--wgg-muted); font-weight: 600; }
 .meta dd { margin: 0; overflow-wrap: anywhere; }
-.actions { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
+.meta .oid-value { font-family: var(--wgg-mono); font-size: 11px; }
+.commit-body { margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; }
+.actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
 .action {
   border: 1px solid var(--wgg-line); border-radius: 2px; background: var(--wgg-panel-raised);
-  padding: 4px 8px; font-size: 11px;
+  padding: 3px 8px; font-size: 11px;
 }
 .action.primary { border-color: var(--wgg-accent); background: #0e639c; color: #fff; }
-.changes { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px 14px; }
-.change {
-  width: 100%; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 7px; text-align: left;
-  padding: 4px 3px; border: 1px solid transparent; border-radius: 0; background: transparent; font-size: 11px;
+.tree, .tree ul { margin: 0; padding: 0; list-style: none; }
+.tree ul { padding-left: 14px; }
+.tree-dir, .tree-file {
+  width: 100%; display: flex; align-items: center; gap: 6px; padding: 1px 4px;
+  border: 0; border-radius: 0; background: transparent; text-align: left;
+  font-size: 11px; white-space: nowrap;
 }
-.change:hover { background: var(--wgg-hover); }
-.change-code { font: 11px var(--wgg-mono); color: #4ec9b0; }
-.change-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stats { font: 10px var(--wgg-mono); color: var(--wgg-muted); }
+.tree-dir:hover, .tree-file:hover { background: var(--wgg-hover); }
+.tree-file.active { background: var(--wgg-selected); }
+.twistie { flex: none; width: 10px; color: var(--wgg-muted); font-size: 9px; }
+.dir-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--wgg-muted); }
+.change-code { flex: none; width: 12px; text-align: center; font: 11px var(--wgg-mono); color: var(--wgg-muted); }
+.change-code.add { color: #81b88b; }
+.change-code.modify { color: #e2c08d; }
+.change-code.delete { color: #f14c4c; }
+.change-code.rename, .change-code.copy { color: #6cb8e6; }
+.change-path { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.stats { flex: none; font: 10px var(--wgg-mono); color: var(--wgg-muted); }
+.no-changes { margin: 6px 4px; color: var(--wgg-faint); font-size: 11px; }
 .patch {
-  margin: 10px 0 0; padding: 10px; max-height: 420px; overflow: auto; border: 1px solid var(--wgg-line);
+  margin: 10px 0 0; padding: 10px; overflow: auto; border: 1px solid var(--wgg-line);
   background: var(--wgg-bg); font: 10px/1.55 var(--wgg-mono); white-space: pre; tab-size: 2;
 }
 .empty, .loading, .error { display: grid; place-items: center; min-height: 220px; color: var(--wgg-muted); text-align: center; padding: 30px; }
 .error { color: #ff8585; }
 .load-more { position: absolute; left: 50%; display: block; margin: 8px 0; transform: translateX(-50%); }
 @keyframes details-open {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 @media (max-width: 760px) {
   .toolbar { gap: 8px; }
@@ -196,6 +216,8 @@ select, .icon-button {
   .branch-control select { width: 100%; }
   .header, .row { grid-template-columns: var(--wgg-graph-width) minmax(220px, 1fr) var(--wgg-commit-width); }
   .header > :nth-child(3), .header > :nth-child(4), .row > :nth-child(3), .row > :nth-child(4) { display: none; }
+  .inline-details { flex-direction: column; padding-left: 12px; }
+  .details-files { border-left: 0; border-top: 1px solid var(--wgg-line); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
@@ -225,6 +247,33 @@ function formatDate(value?: string): string {
   }).format(date);
 }
 
+interface FileTreeNode {
+  dirs: Map<string, FileTreeNode>;
+  files: GitGraphChange[];
+}
+
+function buildFileTree(changes: readonly GitGraphChange[]): FileTreeNode {
+  const root: FileTreeNode = { dirs: new Map(), files: [] };
+  for (const change of changes) {
+    const parts = change.path.split("/");
+    let node = root;
+    for (const part of parts.slice(0, -1)) {
+      let next = node.dirs.get(part);
+      if (!next) {
+        next = { dirs: new Map(), files: [] };
+        node.dirs.set(part, next);
+      }
+      node = next;
+    }
+    node.files.push(change);
+  }
+  return root;
+}
+
+function baseName(path: string): string {
+  return path.split("/").pop() ?? path;
+}
+
 function svgElement<K extends keyof SVGElementTagNameMap>(
   name: K,
   attributes: Record<string, string>
@@ -251,6 +300,7 @@ export class WebGitGraphElement extends HTMLElementBase {
   #details?: GitGraphCommitDetails;
   #comparison?: GitGraphComparison;
   #fileDiff?: GitGraphFileDiff;
+  #collapsedDirs = new Set<string>();
   #loading = false;
   #loadingMore = false;
   #error?: string;
@@ -283,7 +333,18 @@ export class WebGitGraphElement extends HTMLElementBase {
 
   set provider(value: GitGraphProvider | undefined) {
     this.#provider = value;
-    if (this.isConnected && value) void this.#load(false);
+    if (!value) return;
+    // A new provider is a new data source: the previous page's repositoryId and
+    // cursor must not be replayed against it, or the provider's own default
+    // repository is shadowed by the stale one.
+    this.#page = {
+      ...this.#page,
+      repositoryId: undefined,
+      repositoryName: undefined,
+      cursor: undefined,
+      hasMore: false
+    };
+    if (this.isConnected) void this.#load(false);
   }
 
   get data(): GitGraphPage {
@@ -321,6 +382,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     this.#details = undefined;
     this.#comparison = undefined;
     this.#error = undefined;
+    this.#collapsedDirs.clear();
     this.#recompute();
   }
 
@@ -349,6 +411,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     this.#compareOid = undefined;
     this.#comparison = undefined;
     this.#fileDiff = undefined;
+    this.#collapsedDirs.clear();
     this.dispatchEvent(
       new CustomEvent("gitgraph-commit-select", {
         bubbles: true,
@@ -359,7 +422,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     void this.#loadDetails(commit);
     this.#renderWindow();
     this.#renderDetailsPanel();
-    queueMicrotask(() => this.#centerDetails(commit.oid));
+    queueMicrotask(() => this.#revealDetails(commit.oid));
   }
 
   async compareCommits(baseOid: string, headOid: string): Promise<void> {
@@ -369,6 +432,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     this.#selectedOid = baseOid;
     this.#compareOid = headOid;
     this.#fileDiff = undefined;
+    this.#collapsedDirs.clear();
     this.#renderWindow();
     this.#renderDetailsPanel(true);
     try {
@@ -603,6 +667,8 @@ export class WebGitGraphElement extends HTMLElementBase {
       row.addEventListener("click", (event) => {
         if ((event.metaKey || event.ctrlKey) && this.#selectedOid && this.#selectedOid !== commit.oid) {
           void this.compareCommits(this.#selectedOid, commit.oid);
+        } else if (commit.oid === this.#selectedOid && !this.#compareOid) {
+          this.#closeDetails();
         } else {
           this.selectCommit(commit.oid);
         }
@@ -736,52 +802,54 @@ export class WebGitGraphElement extends HTMLElementBase {
     const details = this.#root.querySelector<HTMLElement>(".inline-details");
     if (!details || !this.#selectedOid) return;
     details.innerHTML = `
-      <div class="details-head"><span class="details-title"></span><button class="icon-button close" type="button" aria-label="Close details">×</button></div>
-      <div class="details-content"></div>`;
-    details.querySelector(".close")?.addEventListener("click", () => this.#closeDetails());
-    const title = details.querySelector<HTMLElement>(".details-title")!;
-    const content = details.querySelector<HTMLElement>(".details-content")!;
+      <button class="details-close" type="button" aria-label="Close details">×</button>
+      <div class="details-summary"></div>
+      <div class="details-files"></div>`;
+    details.querySelector(".details-close")?.addEventListener("click", () => this.#closeDetails());
+    const summary = details.querySelector<HTMLElement>(".details-summary")!;
+    const files = details.querySelector<HTMLElement>(".details-files")!;
     if (this.#compareOid) {
-      title.textContent = "Commit comparison";
       if (waiting || !this.#comparison) {
-        content.innerHTML = `<div class="loading">Calculating tree difference…</div>`;
-      } else {
-        this.#renderComparison(content, this.#comparison);
+        summary.innerHTML = `<div class="loading">Calculating tree difference…</div>`;
+        return;
       }
+      this.#renderComparison(summary, files, this.#comparison);
       return;
     }
-    title.textContent = "Commit details";
     const commit = this.#details?.commit ?? this.#page.commits.find((item) => item.oid === this.#selectedOid);
     if (!commit || waiting) {
-      content.innerHTML = `<div class="loading">Reading commit object…</div>`;
+      summary.innerHTML = `<div class="loading">Reading commit object…</div>`;
       return;
     }
-    const heading = document.createElement("h2");
-    heading.className = "commit-title";
-    heading.textContent = commit.message.split("\n", 1)[0] ?? commit.oid;
-    content.append(heading);
     const meta = document.createElement("dl");
     meta.className = "meta";
-    const fields: Array<readonly [string, string]> = [
-      ["SHA", commit.oid],
+    const fields: Array<readonly [string, string, boolean?]> = [
+      ["Commit", commit.kind === "working-tree" ? "uncommitted changes" : commit.oid, true],
+      ["Parents", commit.parents.map(shortOid).join(", ") || "root commit", true],
       ["Author", `${commit.author?.name ?? "Unknown"}${commit.author?.email ? ` <${commit.author.email}>` : ""}`],
-      ["Committed", formatDate(commit.committedAt ?? commit.authoredAt)],
-      ["Parents", commit.parents.map(shortOid).join(", ") || "root commit"]
+      ["Date", formatDate(commit.committedAt ?? commit.authoredAt)]
     ];
-    for (const [label, value] of fields) {
+    for (const [label, value, mono] of fields) {
       const dt = document.createElement("dt");
       const dd = document.createElement("dd");
       dt.textContent = label;
       dd.textContent = value;
+      if (mono) dd.className = "oid-value";
       meta.append(dt, dd);
     }
-    content.append(meta);
+    summary.append(meta);
+    const body = document.createElement("p");
+    body.className = "commit-body";
+    body.textContent = (this.#details?.body ?? commit.message).trim();
+    summary.append(body);
     const actions = document.createElement("div");
     actions.className = "actions";
     actions.innerHTML = `<button class="action primary copy" type="button">Copy SHA</button><button class="action compare-action" type="button">Compare with…</button>`;
     actions.querySelector(".copy")?.addEventListener("click", () => void navigator.clipboard.writeText(commit.oid));
-    actions.querySelector(".compare-action")?.addEventListener("click", () => {
-      title.textContent = "Select another commit";
+    const compareAction = actions.querySelector<HTMLButtonElement>(".compare-action");
+    compareAction?.addEventListener("click", () => {
+      compareAction.textContent = "Ctrl/Cmd-click another commit";
+      compareAction.disabled = true;
       this.#root.querySelector<HTMLElement>(".scroller")?.focus();
     });
     if (commit.url) {
@@ -791,20 +859,19 @@ export class WebGitGraphElement extends HTMLElementBase {
       open.addEventListener("click", () => window.open(commit.url, "_blank", "noopener,noreferrer"));
       actions.append(open);
     }
-    content.append(actions);
-    if (this.#details?.changes.length) this.#renderChanges(content, this.#details.changes);
+    summary.append(actions);
+    this.#renderFileTree(files, this.#details?.changes ?? []);
   }
 
-  #renderComparison(content: HTMLElement, comparison: GitGraphComparison): void {
+  #renderComparison(summary: HTMLElement, files: HTMLElement, comparison: GitGraphComparison): void {
     const heading = document.createElement("h2");
-    heading.className = "commit-title";
+    heading.className = "details-heading";
     heading.textContent = `${this.#revisionLabel(comparison.base)} → ${this.#revisionLabel(comparison.head)}`;
-    content.append(heading);
-    const summary = document.createElement("p");
-    summary.className = "stats";
-    summary.textContent = `${comparison.changes.length} files · +${comparison.additions} −${comparison.deletions}${comparison.truncated ? " · truncated" : ""}`;
-    content.append(summary);
-    this.#renderChanges(content, comparison.changes, comparison);
+    summary.append(heading);
+    const stats = document.createElement("p");
+    stats.className = "stats";
+    stats.textContent = `${comparison.changes.length} files · +${comparison.additions} −${comparison.deletions}${comparison.truncated ? " · truncated" : ""}`;
+    summary.append(stats);
     if (this.#fileDiff) {
       const patch = document.createElement("pre");
       patch.className = "patch";
@@ -812,33 +879,91 @@ export class WebGitGraphElement extends HTMLElementBase {
         this.#fileDiff.patch ??
         this.#fileDiff.unavailableReason ??
         (this.#fileDiff.binary ? "Binary file — patch unavailable." : "No textual patch.");
-      content.append(patch);
+      summary.append(patch);
+    } else if (comparison.changes.length > 0) {
+      const hint = document.createElement("p");
+      hint.className = "no-changes";
+      hint.textContent = "Select a file to view its diff.";
+      summary.append(hint);
     }
+    this.#renderFileTree(files, comparison.changes, comparison);
   }
 
-  #renderChanges(
-    content: HTMLElement,
-    changes: readonly GitGraphCommitDetails["changes"][number][],
+  #renderFileTree(
+    container: HTMLElement,
+    changes: readonly GitGraphChange[],
     comparison?: GitGraphComparison
   ): void {
-    const list = document.createElement("div");
-    list.className = "changes";
-    for (const change of changes) {
+    if (changes.length === 0) {
+      container.innerHTML = `<p class="no-changes">No file changes.</p>`;
+      return;
+    }
+    const list = document.createElement("ul");
+    list.className = "tree";
+    this.#renderTreeLevel(list, buildFileTree(changes), "", comparison);
+    container.append(list);
+  }
+
+  #renderTreeLevel(
+    list: HTMLElement,
+    node: FileTreeNode,
+    prefix: string,
+    comparison?: GitGraphComparison
+  ): void {
+    for (let [name, dir] of [...node.dirs.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+      // Join single-child folder chains the way file explorers compact them.
+      while (dir.files.length === 0 && dir.dirs.size === 1) {
+        const [entry] = dir.dirs;
+        name = `${name}/${entry![0]}`;
+        dir = entry![1];
+      }
+      const path = prefix ? `${prefix}/${name}` : name;
+      const collapsed = this.#collapsedDirs.has(path);
+      const item = document.createElement("li");
+      const toggle = document.createElement("button");
+      toggle.className = "tree-dir";
+      toggle.type = "button";
+      toggle.setAttribute("aria-expanded", String(!collapsed));
+      const twistie = document.createElement("span");
+      twistie.className = "twistie";
+      twistie.textContent = collapsed ? "▸" : "▾";
+      const label = document.createElement("span");
+      label.className = "dir-name";
+      label.textContent = name;
+      toggle.append(twistie, label);
+      toggle.addEventListener("click", () => {
+        if (collapsed) this.#collapsedDirs.delete(path);
+        else this.#collapsedDirs.add(path);
+        this.#renderDetailsPanel();
+      });
+      item.append(toggle);
+      if (!collapsed) {
+        const children = document.createElement("ul");
+        this.#renderTreeLevel(children, dir, path, comparison);
+        item.append(children);
+      }
+      list.append(item);
+    }
+    for (const change of [...node.files].sort((a, b) => a.path.localeCompare(b.path))) {
+      const item = document.createElement("li");
       const button = document.createElement("button");
-      button.className = "change";
+      button.className = "tree-file";
       button.type = "button";
+      if (comparison && this.#fileDiff?.path === change.path) button.classList.add("active");
+      button.title = change.previousPath ? `${change.previousPath} → ${change.path}` : change.path;
       const code = document.createElement("span");
-      code.className = "change-code";
+      code.className = `change-code ${change.kind}`;
       code.textContent = change.kind.slice(0, 1).toUpperCase();
       const path = document.createElement("span");
       path.className = "change-path";
-      path.textContent = change.previousPath ? `${change.previousPath} → ${change.path}` : change.path;
+      path.textContent = change.previousPath
+        ? `${baseName(change.previousPath)} → ${baseName(change.path)}`
+        : baseName(change.path);
       const stats = document.createElement("span");
       stats.className = "stats";
-      stats.textContent =
-        change.binary
-          ? "binary"
-          : `${change.additions === undefined ? "" : `+${change.additions}`} ${change.deletions === undefined ? "" : `−${change.deletions}`}`.trim();
+      stats.textContent = change.binary
+        ? "binary"
+        : `${change.additions === undefined ? "" : `+${change.additions}`} ${change.deletions === undefined ? "" : `−${change.deletions}`}`.trim();
       button.append(code, path, stats);
       button.addEventListener("click", async () => {
         this.dispatchEvent(
@@ -862,9 +987,9 @@ export class WebGitGraphElement extends HTMLElementBase {
         }
         this.#renderDetailsPanel();
       });
-      list.append(button);
+      item.append(button);
+      list.append(item);
     }
-    content.append(list);
   }
 
   #revisionLabel(revision: GitGraphRevision): string {
@@ -878,6 +1003,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     this.#details = undefined;
     this.#comparison = undefined;
     this.#fileDiff = undefined;
+    this.#collapsedDirs.clear();
     this.#renderWindow();
     this.#renderDetailsPanel();
   }
@@ -894,15 +1020,17 @@ export class WebGitGraphElement extends HTMLElementBase {
     );
   }
 
-  #centerDetails(oid: string): void {
+  #revealDetails(oid: string): void {
     if (this.#selectedOid !== oid) return;
     const selectedIndex = this.#selectedIndex();
     const scroller = this.#root.querySelector<HTMLElement>(".scroller");
     if (selectedIndex < 0 || !scroller) return;
-    const blockTop = selectedIndex * this.#rowHeight;
-    const blockHeight = this.#rowHeight + this.#detailsHeight;
-    const target = blockTop - Math.max(0, (scroller.clientHeight - blockHeight) / 2);
-    scroller.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+    const rowTop = selectedIndex * this.#rowHeight;
+    const blockBottom = rowTop + this.#rowHeight + this.#detailsHeight;
+    let target = scroller.scrollTop;
+    if (blockBottom > target + scroller.clientHeight) target = blockBottom - scroller.clientHeight;
+    if (rowTop < target) target = rowTop;
+    if (target !== scroller.scrollTop) scroller.scrollTo({ top: target, behavior: "smooth" });
   }
 
   async #load(append: boolean, ref?: string): Promise<void> {
