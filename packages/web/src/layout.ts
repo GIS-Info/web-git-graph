@@ -147,7 +147,10 @@ export function layoutGitGraph(
       reserved.add(lane);
       maxLane = Math.max(maxLane, lane);
       const colour = nextColour++;
-      active.push({ lane, target: parent, colour, fromRow: row });
+      // The connecting curve below lands on the new lane at row + 1, so the
+      // lane's own line must continue from there — starting it at `row` leaves
+      // a stub whose upper end floats beside the merge node.
+      active.push({ lane, target: parent, colour, fromRow: row + 1 });
       segments.push({
         from: { lane: primary.lane, row },
         to: { lane, row: row + 1 },

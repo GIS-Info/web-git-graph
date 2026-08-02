@@ -60,6 +60,32 @@ describe("layoutGitGraph", () => {
     expect(layout.segments.some((segment) => segment.dangling)).toBe(true);
   });
 
+  it("anchors every segment start to a node or an upstream segment", () => {
+    const layout = layoutGitGraph([
+      commit("m1", ["a", "b"]),
+      commit("a", ["c"]),
+      commit("b", ["d", "e"]),
+      commit("d", ["c"]),
+      commit("e", ["c"]),
+      commit("c", ["root"]),
+      commit("root", [])
+    ]);
+
+    const nodePoints = new Set(layout.nodes.map((node) => `${node.lane}:${node.row}`));
+    for (const segment of layout.segments) {
+      const key = `${segment.from.lane}:${segment.from.row}`;
+      const anchored =
+        nodePoints.has(key) ||
+        layout.segments.some(
+          (other) =>
+            other !== segment &&
+            other.to.lane === segment.from.lane &&
+            other.to.row === segment.from.row
+        );
+      expect(anchored, `segment ${JSON.stringify(segment)} starts in empty space`).toBe(true);
+    }
+  });
+
   it("supports octopus merges", () => {
     const layout = layoutGitGraph([
       commit("merge", ["a", "b", "c"]),
