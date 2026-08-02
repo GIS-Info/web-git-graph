@@ -1,0 +1,31 @@
+.github/workflows/pages.yml
+  s_1f055028d9877b::t_8f75701e9c8c45 30
+.github/workflows/ci.yml
+  s_1f055028d9877b::t_3d82e42972100d 24
+e2e/demo.spec.ts
+  s_1f055028d9877b::t_bb64b6d787be70 72-73
+  s_1f055028d9877b::t_2690334dab93fa 1-8,11
+  s_1f055028d9877b::t_acd217b442ead6 39
+  s_1f055028d9877b::t_add3370d3398cc 50
+.github/workflows/publish.yml
+  s_1f055028d9877b::t_4859e66d25ba46 1,25-40
+docs/roadmap/v0.1-release-and-hardening-plan.md
+  s_1f055028d9877b::t_1000486380761a 186,188,190-191,194-196,199-202,204-210
+  s_1f055028d9877b::t_3d88e24691c003 214-218
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "11bfaa67b4711e829009b13f59e8ebf9c1c865ca",
+  "prompts": {},
+  "sessions": {
+    "s_1f055028d9877b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "39fc6dd7-7250-415b-93cd-e879dd08607f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
