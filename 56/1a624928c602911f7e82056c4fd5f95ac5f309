@@ -1,0 +1,37 @@
+SECURITY.md
+  s_1f055028d9877b::t_0bc79ba3b49389 10
+packages/protocol/package.json
+  s_1f055028d9877b::t_d23bbac7b2a791 8,11
+packages/web/package.json
+  s_1f055028d9877b::t_e740201edc8429 8,11
+docs/roadmap/v0.1-release-and-hardening-plan.md
+  s_1f055028d9877b::t_ac88239f564a7d 1-19,22-32,36-106,108-205,215-237,239-330,332-390,392-408
+  s_1f055028d9877b::t_b0b5f3fc4cc65c 206-214
+  s_1f055028d9877b::t_d47607570e4a86 391
+  s_1f055028d9877b::t_6331f9d9ba43ad 20-21
+  s_1f055028d9877b::t_9dc1e9681c3f32 331
+  s_1f055028d9877b::t_a73e659909fab3 238
+  s_1f055028d9877b::t_75cd875c38f387 33-35
+  s_1f055028d9877b::t_debd11d49d67ea 107
+packages/node/package.json
+  s_1f055028d9877b::t_9e3bfe939832cb 8,11
+README.md
+  s_1f055028d9877b::t_1501edf3579f5f 18
+  s_1f055028d9877b::t_3b1e4d360b5e52 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "561a624928c602911f7e82056c4fd5f95ac5f309",
+  "prompts": {},
+  "sessions": {
+    "s_1f055028d9877b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "39fc6dd7-7250-415b-93cd-e879dd08607f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
