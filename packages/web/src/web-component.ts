@@ -722,6 +722,8 @@ export class WebGitGraphElement extends HTMLElementBase {
       this.#rowTop(row, selectedIndex) -
       this.#rowTop(start, selectedIndex) +
       this.#rowHeight * 0.5;
+    const selectedNode =
+      selectedIndex >= 0 ? this.#layout.nodes.find((node) => node.row === selectedIndex) : undefined;
     for (const segment of this.#layout.segments) {
       if (segment.to.row < start || segment.from.row >= end) continue;
       const fromRow = Math.max(start, segment.from.row);
@@ -730,13 +732,13 @@ export class WebGitGraphElement extends HTMLElementBase {
       const x2 = x(segment.to.lane);
       const y1 = y(fromRow);
       const y2 = y(toRow);
-      const path =
-        x1 === x2
-          ? `M ${x1} ${y1} L ${x2} ${y2}`
-          : `M ${x1} ${y1} C ${x1} ${y1 + this.#rowHeight * 0.55}, ${x2} ${y2 - this.#rowHeight * 0.55}, ${x2} ${y2}`;
+      const anchorTop =
+        selectedNode !== undefined &&
+        segment.from.row === selectedIndex &&
+        segment.from.lane === selectedNode.lane;
       svg.append(
         svgElement("path", {
-          d: path,
+          d: this.#segmentPath(x1, x2, y1, y2, anchorTop),
           stroke: PALETTE[segment.colour % PALETTE.length]!,
           ...(segment.dangling ? { "stroke-dasharray": "3 4" } : {})
         })
@@ -755,6 +757,24 @@ export class WebGitGraphElement extends HTMLElementBase {
         })
       );
     }
+  }
+
+  #segmentPath(x1: number, x2: number, y1: number, y2: number, anchorTop: boolean): string {
+    if (x1 === x2) return `M ${x1} ${y1} L ${x2} ${y2}`;
+    const lead = this.#rowHeight * 0.55;
+    if (y2 - y1 <= this.#rowHeight) {
+      return `M ${x1} ${y1} C ${x1} ${y1 + lead}, ${x2} ${y2 - lead}, ${x2} ${y2}`;
+    }
+    // The expanded details panel sits between the two rows, so the pixel gap
+    // exceeds one row. Keep the transition curve within a single row height —
+    // hugging the node the segment is anchored to — and cross the remaining
+    // space vertically so the lane does not drift across the panel.
+    if (anchorTop) {
+      const yBend = y1 + this.#rowHeight;
+      return `M ${x1} ${y1} C ${x1} ${y1 + lead}, ${x2} ${yBend - lead}, ${x2} ${yBend} L ${x2} ${y2}`;
+    }
+    const yBend = y2 - this.#rowHeight;
+    return `M ${x1} ${y1} L ${x1} ${yBend} C ${x1} ${yBend + lead}, ${x2} ${y2 - lead}, ${x2} ${y2}`;
   }
 
   #onKeyDown(event: KeyboardEvent): void {

@@ -91,6 +91,50 @@ test("keeps graph lanes visible while a commit row is hovered", async ({ page })
   expect(topmost).toBe("circle");
 });
 
+test("keeps lane curves compact while commit details are expanded", async ({ page }) => {
+  await gotoDemo(page);
+  const graph = page.locator("web-git-graph");
+
+  // The bend of a lane transition must always complete within one row height.
+  // When the inline details panel is expanded between the two rows a segment
+  // connects, the remaining gap has to be crossed vertically instead of
+  // stretching the curve across the panel.
+  const maxCurveSpan = async (): Promise<number> => {
+    const paths = await graph.evaluate((element) => {
+      const svg = element.shadowRoot!.querySelector<SVGSVGElement>(".graph")!;
+      return [...svg.querySelectorAll("path")]
+        .map((path) => path.getAttribute("d")!)
+        .filter((d) => d.includes("C"));
+    });
+    expect(paths.length).toBeGreaterThan(0);
+    return Math.max(
+      ...paths.map((d) => {
+        const tokens = d.replace(/,/g, " ").split(/\s+/);
+        let lastY = 0;
+        for (let index = 0; index < tokens.length; index += 1) {
+          if (tokens[index] === "M" || tokens[index] === "L") {
+            lastY = Number(tokens[index + 2]);
+            index += 2;
+          } else if (tokens[index] === "C") {
+            return Number(tokens[index + 6]) - lastY;
+          }
+        }
+        return 0;
+      })
+    );
+  };
+
+  // Branch-out: the selected merge commit fans out to parents on other lanes.
+  await graph.locator(".row").nth(2).click();
+  await expect(graph.locator(".inline-details")).toBeVisible();
+  expect(await maxCurveSpan()).toBeLessThanOrEqual(25);
+
+  // Merge-in: lanes below the expanded row converge into the next commit.
+  await graph.locator(".row").nth(5).click();
+  await expect(graph.locator(".inline-details")).toBeVisible();
+  expect(await maxCurveSpan()).toBeLessThanOrEqual(25);
+});
+
 test("connects the demo to the local Node backend through HTTP", async ({ page }) => {
   await gotoDemo(
     page,
