@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 152" role="img" aria-labelledby="title desc">
+  <title id="title">Web Git Graph</title>
+  <desc id="desc">A vertical commit history with a branch that merges back into the main lane.</desc>
+
+  <path
+    d="M31 13v126"
+    fill="none"
+    stroke="#87938e"
+    stroke-linecap="round"
+    stroke-width="8"
+  />
+  <path
+    d="M31 57c0 23 38 12 38 38v18c0 17-15 26-38 26"
+    fill="none"
+    stroke="#14a477"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="8"
+  />
+
+  <circle cx="31" cy="28" r="10" fill="#f26f52" />
+  <circle cx="31" cy="57" r="10" fill="#14a477" />
+  <circle cx="69" cy="101" r="10" fill="#e8a23b" />
+  <circle cx="31" cy="139" r="10" fill="#14a477" />
+</svg>

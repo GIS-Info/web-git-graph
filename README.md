@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./apps/demo/public/brand/web-git-graph-logo.png" width="260" alt="Web Git Graph logo" />
+  <img src="./apps/demo/public/brand/web-git-graph-logo.svg" width="96" alt="Web Git Graph logo" />
 </p>
 
 <h1 align="center">Web Git Graph</h1>

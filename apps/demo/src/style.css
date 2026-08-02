@@ -128,16 +128,16 @@ button { cursor: pointer; }
   text-decoration: none;
 }
 .logo-frame {
-  width: 34px;
-  height: 28px;
+  width: 28px;
+  height: 34px;
   display: grid;
   place-items: center;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--line-strong) 70%, transparent);
-  border-radius: 8px;
+  border-radius: 9px;
   background: #f5f4ef;
 }
-.logo-frame img { width: 31px; height: 18px; object-fit: contain; }
+.logo-frame img { width: 19px; height: 28px; object-fit: contain; }
 nav { display: flex; align-items: center; gap: 30px; }
 nav a {
   position: relative;
@@ -340,8 +340,8 @@ h1 em {
   position: absolute;
   top: 24px;
   left: 26px;
-  width: 108px;
-  height: 62px;
+  width: 68px;
+  height: 108px;
   object-fit: contain;
   opacity: .88;
 }
@@ -654,7 +654,7 @@ web-git-graph {
   border-top: 1px solid var(--line);
   text-align: center;
 }
-.closing img { width: 156px; height: 88px; object-fit: contain; margin-bottom: 28px; }
+.closing img { width: 72px; height: 114px; object-fit: contain; margin-bottom: 28px; }
 .closing .section-kicker { margin-bottom: 22px; }
 .closing h2 { max-width: 920px; }
 .closing .hero-actions { justify-content: center; }
@@ -735,7 +735,7 @@ web-git-graph {
   .hero-lede { font-size: 15px; }
   .hero-actions .button { flex: 1 1 auto; }
   .hero-art { min-height: 370px; border-radius: 20px; }
-  .hero-logo { width: 82px; height: 48px; }
+  .hero-logo { width: 54px; height: 86px; }
   .hero-metrics > div { min-height: 82px; padding: 14px; }
   .hero-metrics strong { min-width: 30px; font-size: 25px; }
   .lab-topbar form { width: 100%; }
