@@ -1,4 +1,3 @@
-import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -18,8 +17,8 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       input: {
-        main: fileURLToPath(new URL("./index.html", import.meta.url)),
-        protocol: fileURLToPath(new URL("./protocol.html", import.meta.url))
+        main: "index.html",
+        protocol: "protocol.html"
       }
     }
   }
