@@ -13,6 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          # The e2e suite drives the Node backend against this repository's own
+          # history, so a shallow clone leaves it with a single commit to render.
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 10.28.1
