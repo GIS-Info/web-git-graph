@@ -9,10 +9,9 @@ import type {
   GitGraphRef
 } from "@web-git-graph/protocol";
 import type { WebGitGraphElement } from "@web-git-graph/web";
+import { initPage } from "./page";
 import "./style.css";
 
-type Locale = "en" | "zh";
-type Theme = "light" | "dark";
 type StatusState =
   | { kind: "fixture" }
   | { kind: "connecting"; repository: string }
@@ -22,164 +21,167 @@ type StatusState =
 
 const messages = {
   en: {
-    "nav.demo": "Live demo",
-    "nav.principles": "How it works",
+    "nav.demo": "Demo",
+    "nav.how": "How it works",
     "nav.guide": "Get started",
+    "nav.protocol": "HTTP protocol",
     "theme.toDark": "Switch to dark theme",
     "theme.toLight": "Switch to light theme",
-    "hero.eyebrow": "Framework-free · Browser native",
-    "hero.titleA": "Your Git history,",
-    "hero.titleB": "finally visible.",
-    "hero.lede": "A focused, embeddable commit graph for any webpage. Keep the same interaction model across GitHub, your own API, and local Git.",
-    "hero.try": "Explore the live demo",
-    "hero.install": "Installation guide",
-    "hero.artLabel": "Deterministic lane layout",
-    "metrics.framework": "framework dependencies",
-    "metrics.providers": "provider paths",
-    "metrics.backends": "backend choices",
-    "metrics.component": "Web Component",
+    "hero.eyebrow": "Web Component · Zero framework dependencies",
+    "hero.titleA": "Git history,",
+    "hero.titleB": "on any page.",
+    "hero.lede": "One embeddable element that renders commit graphs from GitHub, your own backend, or a local repository — with the same UI everywhere.",
+    "hero.try": "Try the live demo",
+    "hero.install": "Get started",
+    "hero.caption": "the actual component UI",
+    "facts.framework": "framework dependencies",
+    "facts.element": "custom element",
+    "facts.providers": "built-in providers",
+    "facts.endpoints": "read-only protocol endpoints",
     "demo.kicker": "Live demo",
-    "demo.title": "See the graph work.",
-    "demo.description": "Search history, switch refs, inspect a commit, or Ctrl/Cmd-click two commits to compare them. You can also load any public GitHub repository.",
-    "demo.workspace": "Live workspace",
+    "demo.title": "Try it live.",
+    "demo.description": "Search, switch refs, open commit details inline, or Ctrl/Cmd-click two commits to compare. Load any public GitHub repository.",
     "demo.history": "Repository history",
     "demo.repoLabel": "GitHub repository",
-    "demo.load": "Load graph",
-    "demo.statusFixture": "Showing a deterministic fixture. Enter a public repository to load live history.",
-    "demo.hint": "Tip: select a commit to open details inline.",
-    "principles.kicker": "How it works",
-    "principles.title": "One contract. Four deep modules.",
-    "principles.description": "Rendering never knows where Git data came from. A small protocol seam keeps browsers, servers, and editor hosts independently replaceable.",
-    "principles.source.title": "Git source",
-    "principles.source.body": "GitHub REST, HTTP v1, or local Git.",
-    "principles.provider.title": "Provider adapter",
-    "principles.provider.body": "Normalizes history into transport-neutral DTOs.",
-    "principles.layout.title": "Lane engine",
-    "principles.layout.body": "Produces deterministic nodes and merge segments.",
-    "principles.view.title": "Web Component",
-    "principles.view.body": "Virtualizes rows and renders an accessible treegrid.",
-    "principles.noteA.title": "Stable pagination",
-    "principles.noteA.body": "Opaque cursors preserve the visible graph while history grows.",
-    "principles.noteB.title": "Safe by default",
-    "principles.noteB.body": "Local paths stay server-side; Git commands never pass through a shell.",
-    "principles.noteC.title": "Framework agnostic",
-    "principles.noteC.body": "Use the same element in plain HTML, React, Vue, Svelte, or Angular.",
-    "guide.kicker": "Quick start",
-    "guide.title": "From install to graph in three steps.",
-    "guide.description": "The browser package contains the component and provider adapters. Shared protocol types stay in their own package.",
+    "demo.load": "Load",
+    "demo.statusFixture": "Showing fixture data. Enter a public repository to load live history.",
+    "how.kicker": "How it works",
+    "how.title": "Swap the data. Keep the UI.",
+    "how.description": "The component talks to one small provider interface. Change where the commits come from — the layout and interactions stay identical.",
+    "how.stage1.tag": "Data source",
+    "how.stage1.title": "A provider fetches history",
+    "how.stage1.body": "GitHub REST, an HTTP v1 backend, or local Git — all normalized to the same typed DTOs.",
+    "how.stage2.tag": "Layout",
+    "how.stage2.title": "Lanes are computed deterministically",
+    "how.stage2.body": "The same commits always produce the same graph, and lanes stay stable across pages.",
+    "how.stage3.tag": "Render",
+    "how.stage3.title": "The element draws the graph",
+    "how.stage3.body": "Virtualized rows in an accessible treegrid, themeable with CSS custom properties.",
+    "how.noteA.title": "Read-only by design",
+    "how.noteA.body": "No checkout, merge, rebase, or reset is exposed. Git commands never pass through a shell.",
+    "how.noteB.title": "Any framework",
+    "how.noteB.body": "The same element works in plain HTML, React, Vue, Svelte, and Angular.",
+    "how.noteC.title": "One shared contract",
+    "how.noteC.body": "DTOs, JSON Schemas, and the OpenAPI document live in @web-git-graph/protocol.",
+    "guide.kicker": "Get started",
+    "guide.title": "Install, register, connect.",
+    "guide.description": "Two lines of setup, then pick where the commits come from.",
     "guide.step1": "Install",
-    "guide.step1Body": "Add the browser renderer and the shared protocol types.",
-    "guide.step2": "Register",
-    "guide.step2Body": "Register the native custom element once in your browser entry.",
-    "guide.step3": "Connect",
-    "guide.step3Body": "Choose a provider and assign it directly to the element.",
-    "providers.kicker": "Choose your data path",
-    "providers.title": "The UI stays the same. The provider is yours.",
-    "providers.github.title": "Browser direct",
-    "providers.github.body": "Read a public GitHub repository directly from the browser.",
-    "providers.http.title": "HTTP protocol",
-    "providers.http.body": "Connect any backend through the versioned, language-neutral HTTP contract.",
-    "providers.local.title": "Local Git",
-    "providers.local.body": "Serve worktrees, stashes, comparisons, and diffs from Node.",
-    "closing.kicker": "Bring a desktop-grade Git graph to the web.",
+    "guide.step2": "Register the element",
+    "guide.step3": "Connect a data source",
+    "connect.github.tab": "GitHub direct",
+    "connect.github.body": "Read public repositories straight from the browser — no server required.",
+    "connect.http.tab": "HTTP backend",
+    "connect.http.body": "Serve history from your own infrastructure — any backend that implements the six read-only endpoints of the HTTP v1 protocol.",
+    "connect.http.link": "Read the HTTP v1 protocol reference →",
+    "connect.local.tab": "Local repository",
+    "connect.local.body": "One command serves a local repository over the same protocol. It binds to 127.0.0.1, and filesystem paths never reach the browser.",
+    "callout.title": "The protocol behind every backend",
+    "callout.body": "Six read-only JSON endpoints, a versioned media type, and a typed error model — documented with examples.",
+    "callout.action": "Protocol reference →",
     "closing.title": "History is easier to trust when you can see it.",
     "closing.demo": "Open the demo",
     "closing.github": "View on GitHub ↗",
     "footer.tagline": "Framework-free Git history for the web.",
     "common.copy": "Copy",
     "common.copied": "Copied",
-    "status.fixture": "Showing a deterministic fixture. Enter a public repository to load live history.",
+    "status.fixture": "Showing fixture data. Enter a public repository to load live history.",
     "status.connecting": "Connecting to github.com/{repository}…",
     "status.connected": "Connected to {backend} · repository {repository}",
-    "status.tip": "Tip: Ctrl/Cmd-click another commit to compare. Double-click to open the remote commit.",
+    "status.tip": "Tip: Ctrl/Cmd-click another commit to compare. Double-click to open it on GitHub.",
     "status.error": "GitHub API: {message}"
   },
   zh: {
     "nav.demo": "在线演示",
-    "nav.principles": "工作原理",
-    "nav.guide": "使用说明",
+    "nav.how": "工作原理",
+    "nav.guide": "快速开始",
+    "nav.protocol": "HTTP 协议",
     "theme.toDark": "切换到深色主题",
     "theme.toLight": "切换到浅色主题",
-    "hero.eyebrow": "零框架依赖 · 原生浏览器组件",
-    "hero.titleA": "让 Git 历史，",
-    "hero.titleB": "真正清晰可见。",
-    "hero.lede": "一个专注、可嵌入任意网页的提交历史图。在 GitHub、自有 API 与本地 Git 之间，始终保持一致的交互体验。",
-    "hero.try": "体验在线 Demo",
-    "hero.install": "查看安装说明",
-    "hero.artLabel": "确定性的泳道布局",
-    "metrics.framework": "框架依赖",
-    "metrics.providers": "数据接入方式",
-    "metrics.backends": "后端选择",
-    "metrics.component": "原生 Web Component",
+    "hero.eyebrow": "原生 Web Component · 零框架依赖",
+    "hero.titleA": "让 Git 历史",
+    "hero.titleB": "出现在任何页面。",
+    "hero.lede": "一个可嵌入的原生组件,渲染来自 GitHub、自有后端或本地仓库的提交历史——界面与交互始终一致。",
+    "hero.try": "体验在线演示",
+    "hero.install": "快速开始",
+    "hero.caption": "组件的真实界面",
+    "facts.framework": "框架依赖",
+    "facts.element": "个自定义元素",
+    "facts.providers": "种内置数据源",
+    "facts.endpoints": "个只读协议端点",
     "demo.kicker": "在线演示",
-    "demo.title": "直接体验 Git Graph。",
-    "demo.description": "搜索历史、切换分支、查看提交详情，或按住 Ctrl/Cmd 选择两个提交进行比较。也可以载入任意公开 GitHub 仓库。",
-    "demo.workspace": "实时工作区",
+    "demo.title": "直接试用。",
+    "demo.description": "搜索、切换分支、原位展开提交详情,或按住 Ctrl/Cmd 选择两个提交进行比较。也可以载入任意公开 GitHub 仓库。",
     "demo.history": "仓库历史",
     "demo.repoLabel": "GitHub 仓库",
-    "demo.load": "载入图谱",
-    "demo.statusFixture": "当前展示确定性示例数据。输入公开仓库即可载入实时历史。",
-    "demo.hint": "提示：选择一个提交即可在原位置展开详情。",
-    "principles.kicker": "工作原理",
-    "principles.title": "一套契约，四个深模块。",
-    "principles.description": "渲染层无需知道 Git 数据来自哪里。清晰的协议边界让浏览器、服务端和编辑器宿主都能独立替换。",
-    "principles.source.title": "Git 数据源",
-    "principles.source.body": "GitHub REST、HTTP v1 或本地 Git。",
-    "principles.provider.title": "Provider 适配器",
-    "principles.provider.body": "将历史统一为与传输无关的 DTO。",
-    "principles.layout.title": "泳道布局引擎",
-    "principles.layout.body": "生成确定性的节点与合并连线。",
-    "principles.view.title": "Web Component",
-    "principles.view.body": "虚拟化列表并渲染可访问的 treegrid。",
-    "principles.noteA.title": "稳定分页",
-    "principles.noteA.body": "不透明游标让历史增长时，已显示的图谱仍保持稳定。",
-    "principles.noteB.title": "默认安全",
-    "principles.noteB.body": "本地路径只停留在服务端，Git 命令永不经过 shell。",
-    "principles.noteC.title": "框架无关",
-    "principles.noteC.body": "同一个元素可用于原生 HTML、React、Vue、Svelte 或 Angular。",
+    "demo.load": "载入",
+    "demo.statusFixture": "当前展示示例数据。输入公开仓库即可载入实时历史。",
+    "how.kicker": "工作原理",
+    "how.title": "换掉数据源,界面不变。",
+    "how.description": "组件只依赖一个很小的 Provider 接口。无论提交来自哪里,布局和交互都保持一致。",
+    "how.stage1.tag": "数据源",
+    "how.stage1.title": "Provider 拉取历史",
+    "how.stage1.body": "GitHub REST、HTTP v1 后端或本地 Git,统一成同一套类型化 DTO。",
+    "how.stage2.tag": "布局",
+    "how.stage2.title": "泳道按确定性算法计算",
+    "how.stage2.body": "相同的提交永远得到相同的图,分页加载时泳道保持稳定。",
+    "how.stage3.tag": "渲染",
+    "how.stage3.title": "组件绘制图谱",
+    "how.stage3.body": "虚拟滚动的可访问 treegrid,可用 CSS 自定义属性适配主题。",
+    "how.noteA.title": "只读设计",
+    "how.noteA.body": "不暴露 checkout、merge、rebase、reset;Git 命令永不经过 shell。",
+    "how.noteB.title": "任意框架",
+    "how.noteB.body": "同一个元素可用于原生 HTML、React、Vue、Svelte 与 Angular。",
+    "how.noteC.title": "一份共享契约",
+    "how.noteC.body": "DTO、JSON Schema 与 OpenAPI 文档都在 @web-git-graph/protocol 中。",
     "guide.kicker": "快速开始",
-    "guide.title": "三步从安装到显示图谱。",
-    "guide.description": "浏览器包包含组件和 Provider 适配器；共享协议类型则保持为独立模块。",
+    "guide.title": "安装、注册、连接。",
+    "guide.description": "两行代码完成初始化,然后选择提交数据的来源。",
     "guide.step1": "安装",
-    "guide.step1Body": "加入浏览器渲染器与共享协议类型。",
-    "guide.step2": "注册",
-    "guide.step2Body": "在浏览器入口中注册一次原生自定义元素。",
-    "guide.step3": "连接数据",
-    "guide.step3Body": "选择 Provider，并直接赋值给组件。",
-    "providers.kicker": "选择数据接入方式",
-    "providers.title": "界面始终一致，Provider 由你决定。",
-    "providers.github.title": "浏览器直连",
-    "providers.github.body": "直接在浏览器中读取公开 GitHub 仓库。",
-    "providers.http.title": "HTTP 协议",
-    "providers.http.body": "通过带版本、语言无关的 HTTP 契约连接任意后端。",
-    "providers.local.title": "本地 Git",
-    "providers.local.body": "通过 Node 提供 worktree、stash、比较与 diff。",
-    "closing.kicker": "把桌面级 Git Graph 带到 Web。",
-    "closing.title": "看得见的历史，更值得信任。",
+    "guide.step2": "注册组件",
+    "guide.step3": "连接数据源",
+    "connect.github.tab": "GitHub 直连",
+    "connect.github.body": "浏览器直接读取公开仓库,无需任何服务端。",
+    "connect.http.tab": "HTTP 后端",
+    "connect.http.body": "用自己的基础设施提供历史数据——任何实现 HTTP v1 协议六个只读端点的后端都可以。",
+    "connect.http.link": "查看 HTTP v1 协议参考 →",
+    "connect.local.tab": "本地仓库",
+    "connect.local.body": "一条命令即可用同一协议提供本地仓库。默认只监听 127.0.0.1,文件路径永远不会到达浏览器。",
+    "callout.title": "每个后端背后的协议",
+    "callout.body": "六个只读 JSON 端点、带版本的媒体类型与类型化错误模型,附完整示例。",
+    "callout.action": "协议参考 →",
+    "closing.title": "看得见的历史,更值得信任。",
     "closing.demo": "打开在线演示",
     "closing.github": "在 GitHub 查看 ↗",
     "footer.tagline": "为 Web 而生的零框架 Git 历史图。",
     "common.copy": "复制",
     "common.copied": "已复制",
-    "status.fixture": "当前展示确定性示例数据。输入公开仓库即可载入实时历史。",
+    "status.fixture": "当前展示示例数据。输入公开仓库即可载入实时历史。",
     "status.connecting": "正在连接 github.com/{repository}…",
     "status.connected": "已连接 {backend} · 仓库 {repository}",
-    "status.tip": "提示：按住 Ctrl/Cmd 选择另一个提交进行比较；双击可打开远程提交。",
-    "status.error": "GitHub API：{message}"
+    "status.tip": "提示:按住 Ctrl/Cmd 选择另一个提交进行比较;双击可在 GitHub 打开。",
+    "status.error": "GitHub API:{message}"
   }
-} as const;
+};
 
 const graph = document.querySelector<WebGitGraphElement>("#graph")!;
 const form = document.querySelector<HTMLFormElement>("#repo-form")!;
 const repositoryInput = document.querySelector<HTMLInputElement>("#repository")!;
 const status = document.querySelector<HTMLElement>("#status")!;
-const themeButton = document.querySelector<HTMLButtonElement>("#theme-switch")!;
-const themeMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')!;
-const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-let locale: Locale = resolveLocale();
-let theme: Theme = resolveTheme();
 let statusState: StatusState = { kind: "fixture" };
+
+const page = initPage({
+  messages,
+  documentTitle: {
+    en: "Web Git Graph — Git history for the web",
+    zh: "Web Git Graph — 为 Web 而生的 Git 历史图"
+  },
+  onLocale: renderStatus,
+  onTheme: (theme) => {
+    graph.theme = theme;
+  }
+});
 
 const commits: GitGraphCommit[] = [
   commit("a91de840", ["3f18d220", "be901ad0"], "Merge release/0.1 into main", "Mira Chen", "2026-07-27T08:18:00Z"),
@@ -213,9 +215,8 @@ const fixture: GitGraphPage = {
 };
 
 graph.data = fixture;
-applyTheme(theme, false);
-applyLocale(locale, false);
-setupMotion();
+graph.theme = page.theme;
+renderStatus();
 
 const query = new URLSearchParams(window.location.search);
 const backendUrl = query.get("backend");
@@ -254,132 +255,32 @@ form.addEventListener("submit", (event) => {
   }, 900);
 });
 
-document.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((button) => {
-  button.addEventListener("click", async () => {
-    await navigator.clipboard.writeText(button.dataset.copy ?? "");
-    button.textContent = translate("common.copied");
-    window.setTimeout(() => {
-      button.textContent = translate("common.copy");
-    }, 1300);
+const tabs = document.querySelectorAll<HTMLButtonElement>("[data-tab]");
+const panels = document.querySelectorAll<HTMLElement>("[data-tab-panel]");
+tabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    tabs.forEach((button) => button.setAttribute("aria-selected", String(button === tab)));
+    panels.forEach((panel) => {
+      panel.hidden = panel.dataset.tabPanel !== tab.dataset.tab;
+    });
   });
 });
-
-document.querySelectorAll<HTMLButtonElement>("[data-language]").forEach((button) => {
-  button.addEventListener("click", () => {
-    applyLocale(button.dataset.language === "zh" ? "zh" : "en");
-  });
-});
-
-themeButton.addEventListener("click", () => {
-  applyTheme(theme === "light" ? "dark" : "light");
-});
-
-function resolveLocale(): Locale {
-  const saved = localStorage.getItem("web-git-graph-locale");
-  if (saved === "en" || saved === "zh") return saved;
-  return navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
-}
-
-function resolveTheme(): Theme {
-  const saved = localStorage.getItem("web-git-graph-theme");
-  if (saved === "light" || saved === "dark") return saved;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-function translate(key: keyof (typeof messages)["en"], values?: Record<string, string>): string {
-  let value: string = messages[locale][key];
-  for (const [name, replacement] of Object.entries(values ?? {})) {
-    value = value.replace(`{${name}}`, replacement);
-  }
-  return value;
-}
-
-function applyLocale(next: Locale, persist = true): void {
-  locale = next;
-  document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
-  if (persist) localStorage.setItem("web-git-graph-locale", locale);
-  document.querySelectorAll<HTMLElement>("[data-i18n]").forEach((element) => {
-    if (element.id === "status") return;
-    const key = element.dataset.i18n as keyof (typeof messages)["en"];
-    element.textContent = translate(key);
-  });
-  document.querySelectorAll<HTMLElement>("[data-i18n-aria]").forEach((element) => {
-    const key = element.dataset.i18nAria as keyof (typeof messages)["en"];
-    element.setAttribute("aria-label", translate(key));
-  });
-  document.querySelectorAll<HTMLButtonElement>("[data-language]").forEach((button) => {
-    button.setAttribute("aria-pressed", String(button.dataset.language === locale));
-  });
-  document.title = locale === "zh"
-    ? "Web Git Graph — 为 Web 而生的 Git 历史图"
-    : "Web Git Graph — Git history for the web";
-  updateThemeLabel();
-  renderStatus();
-}
-
-function applyTheme(next: Theme, persist = true): void {
-  theme = next;
-  document.documentElement.dataset.theme = theme;
-  graph.theme = theme;
-  themeMeta.content = theme === "dark" ? "#0e120f" : "#f3f1eb";
-  if (persist) localStorage.setItem("web-git-graph-theme", theme);
-  updateThemeLabel();
-}
-
-function updateThemeLabel(): void {
-  themeButton.setAttribute(
-    "aria-label",
-    translate(theme === "light" ? "theme.toDark" : "theme.toLight")
-  );
-}
 
 function renderStatus(): void {
   if (statusState.kind === "fixture") {
-    status.textContent = translate("status.fixture");
+    status.textContent = page.t("status.fixture");
   } else if (statusState.kind === "connecting") {
-    status.textContent = translate("status.connecting", { repository: statusState.repository });
+    status.textContent = page.t("status.connecting", { repository: statusState.repository });
   } else if (statusState.kind === "connected") {
-    status.textContent = translate("status.connected", {
+    status.textContent = page.t("status.connected", {
       backend: statusState.backend,
       repository: statusState.repository
     });
   } else if (statusState.kind === "tip") {
-    status.textContent = translate("status.tip");
+    status.textContent = page.t("status.tip");
   } else {
-    status.textContent = translate("status.error", { message: statusState.message });
+    status.textContent = page.t("status.error", { message: statusState.message });
   }
-}
-
-function setupMotion(): void {
-  if (reducedMotion.matches) {
-    document.querySelectorAll(".reveal").forEach((element) => element.classList.add("is-visible"));
-    return;
-  }
-  document.documentElement.classList.add("motion");
-  const observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        entry.target.classList.add("is-visible");
-        observer.unobserve(entry.target);
-      }
-    },
-    { rootMargin: "0px 0px -8%", threshold: 0.08 }
-  );
-  document.querySelectorAll(".reveal").forEach((element) => observer.observe(element));
-
-  const art = document.querySelector<HTMLElement>(".hero-art");
-  const dag = document.querySelector<SVGElement>(".hero-dag");
-  art?.addEventListener("pointermove", (event) => {
-    if (!dag) return;
-    const bounds = art.getBoundingClientRect();
-    const x = (event.clientX - bounds.left) / bounds.width - .5;
-    const y = (event.clientY - bounds.top) / bounds.height - .5;
-    dag.style.transform = `translate(${x * 8}px, ${y * 8}px)`;
-  });
-  art?.addEventListener("pointerleave", () => {
-    if (dag) dag.style.transform = "translate(0, 0)";
-  });
 }
 
 function commit(

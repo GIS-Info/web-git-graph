@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="The Web Git Graph HTTP v1 protocol: six read-only JSON endpoints for serving Git history from any backend."
+    />
+    <meta name="theme-color" content="#f3f1eb" />
+    <link rel="icon" type="image/svg+xml" href="./brand/web-git-graph-logo.svg" />
+    <title>HTTP v1 protocol — Web Git Graph</title>
+  </head>
+  <body class="protocol-page">
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="wordmark" href="./" aria-label="Web Git Graph home">
+          <span class="logo-frame">
+            <img src="./brand/web-git-graph-logo.svg" alt="" />
+          </span>
+          <span>Web Git Graph</span>
+        </a>
+        <nav aria-label="Primary navigation">
+          <a href="./" data-i18n="nav.overview">Overview</a>
+          <a href="#endpoints" data-i18n="nav.endpoints">Endpoints</a>
+          <a href="#errors" data-i18n="nav.errors">Errors</a>
+          <a href="#backend" data-i18n="nav.backend">Build a backend</a>
+        </nav>
+        <div class="header-actions">
+          <div class="language-switch" aria-label="Language">
+            <button type="button" data-language="en" aria-pressed="true">EN</button>
+            <button type="button" data-language="zh" aria-pressed="false">中文</button>
+          </div>
+          <button
+            class="theme-switch"
+            id="theme-switch"
+            type="button"
+            aria-label="Switch to dark theme"
+          >
+            <svg class="sun" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.5"></circle>
+              <path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"></path>
+            </svg>
+            <svg class="moon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 15.2A8.2 8.2 0 0 1 8.8 4a8.2 8.2 0 1 0 11.2 11.2Z"></path>
+            </svg>
+          </button>
+          <a
+            class="github-button"
+            href="https://github.com/GIS-Info/web-git-graph"
+            aria-label="Open GitHub repository"
+          >
+            <span>GitHub</span><span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="doc-hero shell">
+        <div class="reveal">
+          <p class="eyebrow">
+            <span class="eyebrow-dot"></span>
+            <span data-i18n="doc.eyebrow">Protocol reference</span>
+          </p>
+          <h1 data-i18n="doc.title">The HTTP v1 protocol.</h1>
+          <p class="hero-lede" data-i18n="doc.lede">
+            Six read-only JSON endpoints. Implement them in any language and
+            &lt;web-git-graph&gt; can render your history — no SDK required.
+          </p>
+        </div>
+        <dl class="doc-facts reveal">
+          <div>
+            <dt data-i18n="doc.fact1.term">Media type</dt>
+            <dd><code>application/vnd.web-git-graph.v1+json</code></dd>
+          </div>
+          <div>
+            <dt data-i18n="doc.fact2.term">Access</dt>
+            <dd data-i18n="doc.fact2.desc">Read-only — no Git mutation exists in the contract</dd>
+          </div>
+          <div>
+            <dt data-i18n="doc.fact3.term">Versioning</dt>
+            <dd data-i18n="doc.fact3.desc">All routes live under /v1; the media type carries the version</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="doc-section shell" id="quickstart">
+        <div class="section-heading reveal">
+          <div>
+            <p class="section-kicker"><span>01</span><span data-i18n="quick.kicker">Quick start</span></p>
+            <h2 data-i18n="quick.title">Two sides of the wire.</h2>
+          </div>
+          <p data-i18n="quick.description">
+            The reference server ships with @web-git-graph/node; the browser
+            client with @web-git-graph/web. Either side can be replaced.
+          </p>
+        </div>
+        <div class="wire-grid reveal">
+          <article>
+            <h3 data-i18n="quick.server">Serve a repository</h3>
+            <pre><code>npx @web-git-graph/node serve --repo . \
+  --port 4174 \
+  --cors-origin http://127.0.0.1:4173</code></pre>
+            <p data-i18n="quick.serverNote">Binds to 127.0.0.1 by default. CORS stays off unless you enable it.</p>
+          </article>
+          <article>
+            <h3 data-i18n="quick.client">Connect the component</h3>
+            <pre><code>import { HttpGitGraphProvider } from "@web-git-graph/web/providers/http";
+
+graph.provider = new HttpGitGraphProvider({
+  baseUrl: "http://127.0.0.1:4174",
+  repositoryId: "local"
+});</code></pre>
+            <p data-i18n="quick.clientNote">The provider sends Accept: application/vnd.web-git-graph.v1+json and handles paging, comparison, and diffs.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="doc-section shell" id="endpoints">
+        <div class="section-heading reveal">
+          <div>
+            <p class="section-kicker"><span>02</span><span data-i18n="endpoints.kicker">Endpoints</span></p>
+            <h2 data-i18n="endpoints.title">Six routes, one contract.</h2>
+          </div>
+          <p data-i18n="endpoints.description">
+            Repository ids are opaque tokens minted by the server — filesystem
+            paths never cross the wire. Cursors are opaque too; treat them as
+            bookmarks, not offsets.
+          </p>
+        </div>
+
+        <article class="endpoint reveal">
+          <header>
+            <span class="method get">GET</span>
+            <code>/v1/capabilities</code>
+          </header>
+          <div class="endpoint-body">
+            <p data-i18n="ep.capabilities.desc">
+              Feature discovery. The component reads this once and hides
+              anything the backend does not support.
+            </p>
+            <pre><code>{
+  "protocolVersion": "1",
+  "history": true,
+  "details": true,
+  "compare": true,
+  "diff": true,
+  "workingTree": true,
+  "stashes": true,
+  "maxPageSize": 200
+}</code></pre>
+          </div>
+        </article>
+
+        <article class="endpoint reveal">
+          <header>
+            <span class="method get">GET</span>
+            <code>/v1/repositories</code>
+          </header>
+          <div class="endpoint-body">
+            <p data-i18n="ep.repositories.desc">
+              Lists the repositories this server exposes. The id is the only
+              handle a client ever holds.
+            </p>
+            <pre><code>[
+  {
+    "id": "local",
+    "name": "web-git-graph",
+    "bare": false,
+    "head": "a91de840c1f2…"
+  }
+]</code></pre>
+          </div>
+        </article>
+
+        <article class="endpoint reveal">
+          <header>
+            <span class="method get">GET</span>
+            <code>/v1/repositories/{id}/history</code>
+          </header>
+          <div class="endpoint-body">
+            <p data-i18n="ep.history.desc">
+              One page of commits plus the refs that point into it. Follow
+              cursor while hasMore is true; lanes stay stable across pages.
+            </p>
+            <table class="params">
+              <thead>
+                <tr><th data-i18n="params.name">Query</th><th data-i18n="params.desc">Description</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>ref</code></td><td data-i18n="ep.history.ref">Branch, tag, or commit to start from (default: HEAD)</td></tr>
+                <tr><td><code>cursor</code></td><td data-i18n="ep.history.cursor">Opaque cursor from the previous page</td></tr>
+                <tr><td><code>limit</code></td><td data-i18n="ep.history.limit">Page size, capped by maxPageSize</td></tr>
+                <tr><td><code>includeWorkingTree</code></td><td data-i18n="ep.history.wt">Include the working-tree row (default: true)</td></tr>
+              </tbody>
+            </table>
+            <pre><code>{
+  "commits": [
+    {
+      "oid": "a91de840c1f2…",
+      "parents": ["3f18d220…", "be901ad0…"],
+      "message": "Merge release/0.1 into main",
+      "kind": "commit",
+      "author": { "name": "Mira Chen" },
+      "committedAt": "2026-07-27T08:18:00Z"
+    }
+  ],
+  "refs": [
+    { "name": "refs/heads/main", "target": "a91de840c1f2…", "kind": "head" }
+  ],
+  "head": "a91de840c1f2…",
+  "cursor": "op9GdWJHaXRHcmFwaA…",
+  "hasMore": true,
+  "repositoryId": "local",
+  "repositoryName": "web-git-graph"
+}</code></pre>
+          </div>
+        </article>
+
+        <article class="endpoint reveal">
+          <header>
+            <span class="method get">GET</span>
+            <code>/v1/repositories/{id}/commits/{oid}</code>
+          </header>
+          <div class="endpoint-body">
+            <p data-i18n="ep.commit.desc">
+              Full details for one commit: message body, refs, and the changed
+              files. Use the literal oid __WORKTREE__ for the working tree.
+            </p>
+            <pre><code>{
+  "commit": {
+    "oid": "a91de840c1f2…",
+    "message": "Merge release/0.1 into main",
+    "kind": "commit"
+  },
+  "refs": [
+    { "name": "refs/tags/v0.1.0-rc.1", "target": "a91de840c1f2…", "kind": "tag" }
+  ],
+  "changes": [
+    {
+      "path": "packages/web/src/layout.ts",
+      "kind": "modify",
+      "additions": 18,
+      "deletions": 4
+    }
+  ],
+  "body": "Full commit message body."
+}</code></pre>
+          </div>
+        </article>
+
+        <article class="endpoint reveal">
+          <header>
+            <span class="method post">POST</span>
+            <code>/v1/repositories/{id}/compare</code>
+          </header>
+          <div class="endpoint-body">
+            <p data-i18n="ep.compare.desc">
+              The tree difference between two revisions. A revision is
+              {"kind":"commit","oid":…}, {"kind":"stash","oid":…}, or
+              {"kind":"working-tree"}.
+            </p>
+            <pre class="request"><code>{
+  "base": { "kind": "commit", "oid": "86d41b10…" },
+  "head": { "kind": "commit", "oid": "a91de840…" }
+}</code></pre>
+            <pre><code>{
+  "base": { "kind": "commit", "oid": "86d41b10…" },
+  "head": { "kind": "commit", "oid": "a91de840…" },
+  "changes": [
+    {
+      "path": "packages/node/src/backend.ts",
+      "kind": "modify",
+      "additions": 42,
+      "deletions": 7
+    }
+  ],
+  "additions": 42,
+  "deletions": 7
+}</code></pre>
+          </div>
+        </article>
+
+        <article class="endpoint reveal">
+          <header>
+            <span class="method post">POST</span>
+            <code>/v1/repositories/{id}/diff</code>
+          </header>
+          <div class="endpoint-body">
+            <p data-i18n="ep.diff.desc">
+              A unified patch for a single file, loaded lazily when a row is
+              expanded. Oversized output is truncated instead of failing.
+            </p>
+            <pre class="request"><code>{
+  "base": { "kind": "commit", "oid": "86d41b10…" },
+  "head": { "kind": "working-tree" },
+  "path": "packages/web/src/layout.ts",
+  "context": 3
+}</code></pre>
+            <pre><code>{
+  "base": { "kind": "commit", "oid": "86d41b10…" },
+  "head": { "kind": "working-tree" },
+  "path": "packages/web/src/layout.ts",
+  "patch": "@@ -12,7 +12,9 @@ export function computeLanes(…"
+}</code></pre>
+          </div>
+        </article>
+      </section>
+
+      <section class="doc-section shell" id="errors">
+        <div class="section-heading reveal">
+          <div>
+            <p class="section-kicker"><span>03</span><span data-i18n="errors.kicker">Errors</span></p>
+            <h2 data-i18n="errors.title">One error shape.</h2>
+          </div>
+          <p data-i18n="errors.description">
+            Every non-2xx response carries the same body. retryable tells the
+            client whether trying again can help; a 409 snapshot_expired means
+            the cursor is stale — restart from the first page.
+          </p>
+        </div>
+        <div class="error-grid reveal">
+          <pre><code>{
+  "error": {
+    "code": "revision_not_found",
+    "message": "Commit 1234abcd was not found.",
+    "retryable": false
+  }
+}</code></pre>
+          <table class="params">
+            <thead>
+              <tr><th>code</th><th>HTTP</th><th data-i18n="errors.meaning">Meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>bad_request</code></td><td>400</td><td data-i18n="err.bad_request">Malformed route, query, or body</td></tr>
+              <tr><td><code>unauthorized</code></td><td>401</td><td data-i18n="err.unauthorized">The authorize hook rejected the request</td></tr>
+              <tr><td><code>forbidden</code></td><td>403</td><td data-i18n="err.forbidden">Authenticated but not allowed</td></tr>
+              <tr><td><code>repository_not_found</code></td><td>404</td><td data-i18n="err.repository_not_found">Unknown repository id</td></tr>
+              <tr><td><code>revision_not_found</code></td><td>404</td><td data-i18n="err.revision_not_found">Unknown commit, stash, or ref</td></tr>
+              <tr><td><code>snapshot_expired</code></td><td>409</td><td data-i18n="err.snapshot_expired">Cursor no longer valid — reload from page one</td></tr>
+              <tr><td><code>output_limit</code></td><td>413</td><td data-i18n="err.output_limit">Request or response exceeded a size limit</td></tr>
+              <tr><td><code>unsupported</code></td><td>422</td><td data-i18n="err.unsupported">The backend does not implement this capability</td></tr>
+              <tr><td><code>rate_limited</code></td><td>429</td><td data-i18n="err.rate_limited">Too many requests — retry later</td></tr>
+              <tr><td><code>internal_error</code></td><td>500</td><td data-i18n="err.internal_error">Unexpected server failure</td></tr>
+              <tr><td><code>git_unavailable</code></td><td>503</td><td data-i18n="err.git_unavailable">Git could not be executed on the server</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="doc-section shell" id="backend">
+        <div class="section-heading reveal">
+          <div>
+            <p class="section-kicker"><span>04</span><span data-i18n="backend.kicker">Build a backend</span></p>
+            <h2 data-i18n="backend.title">Any language works.</h2>
+          </div>
+          <p data-i18n="backend.description">
+            The contract is just HTTP and JSON. Implement the six routes in Go,
+            Rust, Python, Java — whatever already runs in your stack.
+          </p>
+        </div>
+        <div class="backend-grid reveal">
+          <article>
+            <h3 data-i18n="backend.schema.title">Typed contract, exported</h3>
+            <p data-i18n="backend.schema.body">The protocol package ships the DTOs, JSON Schemas, and the OpenAPI document — use them to validate your implementation.</p>
+            <pre><code>import {
+  GIT_GRAPH_JSON_SCHEMAS
+} from "@web-git-graph/protocol";
+import {
+  OPENAPI_DOCUMENT
+} from "@web-git-graph/protocol/http";</code></pre>
+          </article>
+          <article>
+            <h3 data-i18n="backend.node.title">Or reuse the Node handler</h3>
+            <p data-i18n="backend.node.body">A fetch-style handler with an authorize hook drops into Node, and the local backend is hardened: opaque ids, no shell, size limits.</p>
+            <pre><code>import {
+  LocalGitBackend,
+  createGitGraphFetchHandler
+} from "@web-git-graph/node";
+
+const handle = createGitGraphFetchHandler({
+  backend: new LocalGitBackend({ repository: "." }),
+  authorize: ({ request }) => checkToken(request)
+});</code></pre>
+          </article>
+        </div>
+        <ul class="backend-rules reveal">
+          <li data-i18n="backend.rule1">Respond with content-type application/vnd.web-git-graph.v1+json and cache-control: no-store.</li>
+          <li data-i18n="backend.rule2">Never expose filesystem paths — mint opaque repository ids instead.</li>
+          <li data-i18n="backend.rule3">Keep cursors opaque and return snapshot_expired when they go stale.</li>
+          <li data-i18n="backend.rule4">Advertise only what you implement in /v1/capabilities — the UI adapts.</li>
+        </ul>
+      </section>
+
+      <section class="closing shell reveal">
+        <img src="./brand/web-git-graph-logo.svg" alt="" />
+        <h2 data-i18n="closing.title">Six endpoints between Git and your UI.</h2>
+        <div class="hero-actions">
+          <a class="button primary" href="./#demo" data-i18n="closing.demo">Open the live demo</a>
+          <a class="button quiet" href="https://github.com/GIS-Info/web-git-graph" data-i18n="closing.github">View on GitHub ↗</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <a class="wordmark" href="./" aria-label="Web Git Graph home">
+          <span class="logo-frame"><img src="./brand/web-git-graph-logo.svg" alt="" /></span>
+          <span>Web Git Graph</span>
+        </a>
+        <p data-i18n="footer.tagline">Framework-free Git history for the web.</p>
+        <span>MIT · v0.1.0</span>
+      </div>
+    </footer>
+    <script type="module" src="/src/protocol.ts"></script>
+  </body>
+</html>
