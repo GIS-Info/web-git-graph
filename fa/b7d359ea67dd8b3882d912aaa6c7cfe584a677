@@ -1,0 +1,19 @@
+apps/demo/public/brand/web-git-graph-logo.svg
+  s_44ee3659e07d62::t_5e26dec2283038 1,3,6,13,21-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "fab7d359ea67dd8b3882d912aaa6c7cfe584a677",
+  "prompts": {},
+  "sessions": {
+    "s_44ee3659e07d62": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa38c-e56d-76c2-9eda-099324e58825",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
