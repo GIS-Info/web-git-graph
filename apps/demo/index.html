@@ -1,120 +1,332 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Web Git Graph is a framework-free Git history graph with browser and local Node providers."
+      content="Web Git Graph is a framework-free, embeddable Git history graph for browsers and local repositories."
     />
-    <title>Web Git Graph — the commit DAG, made legible</title>
+    <meta name="theme-color" content="#f3f1eb" />
+    <link rel="icon" type="image/png" href="./brand/web-git-graph-logo.png" />
+    <title>Web Git Graph — Git history for the web</title>
   </head>
   <body>
-    <main>
-      <header class="masthead">
-        <a class="wordmark" href="./" aria-label="Web Git Graph home">
-          <span class="mark" aria-hidden="true">
-            <i></i><i></i><i></i>
+    <div class="page-glow" aria-hidden="true"></div>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="wordmark" href="#top" aria-label="Web Git Graph home">
+          <span class="logo-frame">
+            <img src="./brand/web-git-graph-logo.png" alt="" />
           </span>
           <span>Web Git Graph</span>
         </a>
         <nav aria-label="Primary navigation">
-          <a href="#install">Install</a>
-          <a href="#providers">Providers</a>
-          <a class="github-link" href="https://github.com/GIS-Info/web-git-graph">
-            GitHub <span aria-hidden="true">↗</span>
-          </a>
+          <a href="#demo" data-i18n="nav.demo">Live demo</a>
+          <a href="#principles" data-i18n="nav.principles">How it works</a>
+          <a href="#get-started" data-i18n="nav.guide">Get started</a>
         </nav>
-      </header>
-
-      <section class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">Framework-free · Browser native</p>
-          <h1>The commit DAG,<br /><em>without the noise.</em></h1>
+        <div class="header-actions">
+          <div class="language-switch" aria-label="Language">
+            <button type="button" data-language="en" aria-pressed="true">EN</button>
+            <button type="button" data-language="zh" aria-pressed="false">中文</button>
+          </div>
+          <button
+            class="theme-switch"
+            id="theme-switch"
+            type="button"
+            aria-label="Switch to dark theme"
+            data-i18n-aria="theme.toDark"
+          >
+            <svg class="sun" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.5"></circle>
+              <path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"></path>
+            </svg>
+            <svg class="moon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 15.2A8.2 8.2 0 0 1 8.8 4a8.2 8.2 0 1 0 11.2 11.2Z"></path>
+            </svg>
+          </button>
+          <a
+            class="github-button"
+            href="https://github.com/GIS-Info/web-git-graph"
+            aria-label="Open GitHub repository"
+          >
+            <span>GitHub</span><span aria-hidden="true">↗</span>
+          </a>
         </div>
-        <div class="hero-aside">
-          <p class="lede">
-            A focused Git history surface for the web. Bring GitHub, your own
-            backend, or a local repository.
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero shell">
+        <div class="hero-copy reveal">
+          <p class="eyebrow">
+            <span class="eyebrow-dot"></span>
+            <span data-i18n="hero.eyebrow">Framework-free · Browser native</span>
           </p>
-          <div class="install-line" id="install">
+          <h1>
+            <span data-i18n="hero.titleA">Your Git history,</span>
+            <em data-i18n="hero.titleB">finally visible.</em>
+          </h1>
+          <p class="hero-lede" data-i18n="hero.lede">
+            A focused, embeddable commit graph for any webpage. Keep the same
+            interaction model across GitHub, your own API, and local Git.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#demo">
+              <span data-i18n="hero.try">Explore the live demo</span>
+              <span aria-hidden="true">↓</span>
+            </a>
+            <a class="button quiet" href="#get-started" data-i18n="hero.install">
+              Installation guide
+            </a>
+          </div>
+          <div class="install-command" id="install">
             <span aria-hidden="true">$</span>
             <code>npm i @web-git-graph/web</code>
-            <button id="copy-install" type="button" aria-label="Copy install command">
-              Copy
-            </button>
+            <button
+              class="copy-button"
+              id="copy-install"
+              type="button"
+              data-copy="npm i @web-git-graph/web"
+              data-i18n="common.copy"
+            >Copy</button>
           </div>
+        </div>
+
+        <div class="hero-art reveal" aria-hidden="true">
+          <div class="hero-art-grid"></div>
+          <img class="hero-logo" src="./brand/web-git-graph-logo.png" alt="" />
+          <svg class="hero-dag" viewBox="0 0 620 520">
+            <path class="dag-path lane-a" pathLength="1" d="M85 80 C185 80 160 190 260 190 S350 298 430 298 S470 410 550 410"></path>
+            <path class="dag-path lane-b" pathLength="1" d="M85 80 C185 80 170 300 270 300 S342 298 430 298"></path>
+            <path class="dag-path lane-c" pathLength="1" d="M260 190 C320 190 325 110 405 110 S470 175 540 175"></path>
+            <g class="dag-nodes">
+              <circle class="node node-green" cx="85" cy="80" r="10"></circle>
+              <circle class="node node-amber" cx="260" cy="190" r="10"></circle>
+              <circle class="node node-coral" cx="270" cy="300" r="10"></circle>
+              <circle class="node node-green" cx="430" cy="298" r="12"></circle>
+              <circle class="node node-amber" cx="405" cy="110" r="9"></circle>
+              <circle class="node node-coral" cx="540" cy="175" r="9"></circle>
+              <circle class="node node-green" cx="550" cy="410" r="10"></circle>
+            </g>
+            <g class="commit-card card-one">
+              <rect x="294" y="34" width="204" height="58" rx="12"></rect>
+              <circle cx="318" cy="63" r="7"></circle>
+              <path d="M338 55h125M338 70h78"></path>
+            </g>
+            <g class="commit-card card-two">
+              <rect x="54" y="344" width="220" height="58" rx="12"></rect>
+              <circle cx="78" cy="373" r="7"></circle>
+              <path d="M98 365h137M98 380h92"></path>
+            </g>
+          </svg>
+          <div class="art-caption">
+            <span data-i18n="hero.artLabel">Deterministic lane layout</span>
+            <b>O(V + E)</b>
+          </div>
+        </div>
+
+        <div class="hero-metrics reveal">
+          <div><strong>0</strong><span data-i18n="metrics.framework">framework dependencies</span></div>
+          <div><strong>3</strong><span data-i18n="metrics.providers">provider paths</span></div>
+          <div><strong>∞</strong><span data-i18n="metrics.backends">backend choices</span></div>
+          <div><strong>1</strong><span data-i18n="metrics.component">Web Component</span></div>
         </div>
       </section>
 
-      <section class="lab" aria-labelledby="lab-title">
-        <div class="lab-heading">
-          <div class="lab-title">
-            <span class="live-dot" aria-hidden="true"></span>
+      <section class="demo-section shell" id="demo" aria-labelledby="demo-title">
+        <div class="section-heading reveal">
+          <div>
+            <p class="section-kicker"><span>01</span><span data-i18n="demo.kicker">Live demo</span></p>
+            <h2 id="demo-title" data-i18n="demo.title">See the graph work.</h2>
+          </div>
+          <p data-i18n="demo.description">
+            Search history, switch refs, inspect a commit, or Ctrl/Cmd-click two
+            commits to compare them. You can also load any public GitHub repository.
+          </p>
+        </div>
+
+        <div class="lab reveal">
+          <div class="lab-topbar">
+            <div class="lab-identity">
+              <span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <div>
+                <p data-i18n="demo.workspace">Live workspace</p>
+                <h3 data-i18n="demo.history">Repository history</h3>
+              </div>
+            </div>
+            <form id="repo-form">
+              <label for="repository" data-i18n="demo.repoLabel">GitHub repository</label>
+              <div class="repo-control">
+                <input id="repository" name="repository" value="GIS-Info/web-git-graph" />
+                <button type="submit" data-i18n="demo.load">Load graph</button>
+              </div>
+            </form>
+          </div>
+          <div class="status-line">
+            <span class="status-mark" aria-hidden="true"></span>
+            <p id="status" data-i18n="demo.statusFixture">
+              Showing a deterministic fixture. Enter a public repository to load live history.
+            </p>
+            <span class="demo-hint" data-i18n="demo.hint">Tip: select a commit to open details inline.</span>
+          </div>
+          <web-git-graph id="graph" theme="light"></web-git-graph>
+        </div>
+      </section>
+
+      <section class="principles-section" id="principles">
+        <div class="shell">
+          <div class="section-heading inverse reveal">
             <div>
-              <p class="section-label">Live workspace</p>
-              <h2 id="lab-title">Repository history</h2>
+              <p class="section-kicker"><span>02</span><span data-i18n="principles.kicker">How it works</span></p>
+              <h2 data-i18n="principles.title">One contract. Four deep modules.</h2>
             </div>
+            <p data-i18n="principles.description">
+              Rendering never knows where Git data came from. A small protocol seam
+              keeps browsers, servers, and editor hosts independently replaceable.
+            </p>
           </div>
-          <form id="repo-form">
-            <label for="repository">GitHub repository</label>
-            <div class="repo-control">
-              <input id="repository" name="repository" value="GIS-Info/web-git-graph" />
-              <button type="submit">Load graph</button>
-            </div>
-          </form>
+
+          <div class="flow-diagram reveal" aria-label="Architecture flow">
+            <svg class="flow-lines" viewBox="0 0 1200 160" preserveAspectRatio="none" aria-hidden="true">
+              <path pathLength="1" d="M120 80H350"></path>
+              <path pathLength="1" d="M440 80H670"></path>
+              <path pathLength="1" d="M760 80H990"></path>
+              <circle cx="350" cy="80" r="4"></circle>
+              <circle cx="670" cy="80" r="4"></circle>
+              <circle cx="990" cy="80" r="4"></circle>
+            </svg>
+            <article>
+              <b>01</b><span class="flow-icon">⌘</span>
+              <h3 data-i18n="principles.source.title">Git source</h3>
+              <p data-i18n="principles.source.body">GitHub REST, HTTP v1, or local Git.</p>
+            </article>
+            <article>
+              <b>02</b><span class="flow-icon">⇄</span>
+              <h3 data-i18n="principles.provider.title">Provider adapter</h3>
+              <p data-i18n="principles.provider.body">Normalizes history into transport-neutral DTOs.</p>
+            </article>
+            <article>
+              <b>03</b><span class="flow-icon">⑂</span>
+              <h3 data-i18n="principles.layout.title">Lane engine</h3>
+              <p data-i18n="principles.layout.body">Produces deterministic nodes and merge segments.</p>
+            </article>
+            <article>
+              <b>04</b><span class="flow-icon">◇</span>
+              <h3 data-i18n="principles.view.title">Web Component</h3>
+              <p data-i18n="principles.view.body">Virtualizes rows and renders an accessible treegrid.</p>
+            </article>
+          </div>
+
+          <div class="principle-notes reveal">
+            <article>
+              <span>01</span>
+              <h3 data-i18n="principles.noteA.title">Stable pagination</h3>
+              <p data-i18n="principles.noteA.body">Opaque cursors preserve the visible graph while history grows.</p>
+            </article>
+            <article>
+              <span>02</span>
+              <h3 data-i18n="principles.noteB.title">Safe by default</h3>
+              <p data-i18n="principles.noteB.body">Local paths stay server-side; Git commands never pass through a shell.</p>
+            </article>
+            <article>
+              <span>03</span>
+              <h3 data-i18n="principles.noteC.title">Framework agnostic</h3>
+              <p data-i18n="principles.noteC.body">Use the same element in plain HTML, React, Vue, Svelte, or Angular.</p>
+            </article>
+          </div>
         </div>
-        <div class="status-line">
-          <span class="status-mark" aria-hidden="true"></span>
-          <p id="status">
-            Showing a deterministic fixture. Enter a public repository to load live history.
-          </p>
-        </div>
-        <web-git-graph id="graph" theme="dark"></web-git-graph>
       </section>
 
-      <section class="architecture" id="providers">
-        <div class="architecture-heading">
-          <p class="section-label">One graph, three data paths</p>
-          <h2>Use it where your Git data already lives.</h2>
-          <p>
-            The renderer stays independent from transport and storage, so the
-            same interaction model works everywhere.
+      <section class="guide-section shell" id="get-started">
+        <div class="section-heading reveal">
+          <div>
+            <p class="section-kicker"><span>03</span><span data-i18n="guide.kicker">Quick start</span></p>
+            <h2 data-i18n="guide.title">From install to graph in three steps.</h2>
+          </div>
+          <p data-i18n="guide.description">
+            The browser package contains the component and provider adapters.
+            Shared protocol types stay in their own package.
           </p>
         </div>
-        <div class="architecture-grid">
-          <article>
-            <b>01</b>
-            <div class="provider-icon" aria-hidden="true">⌁</div>
-            <h3>Browser direct</h3>
-            <p>Connect public GitHub history without running a server.</p>
+
+        <div class="steps">
+          <article class="step reveal">
+            <header><span>01</span><h3 data-i18n="guide.step1">Install</h3></header>
+            <p data-i18n="guide.step1Body">Add the browser renderer and the shared protocol types.</p>
+            <pre><code>npm i @web-git-graph/web \
+  @web-git-graph/protocol</code></pre>
+            <button class="code-copy" type="button" data-copy="npm i @web-git-graph/web @web-git-graph/protocol" data-i18n="common.copy">Copy</button>
+          </article>
+          <article class="step reveal">
+            <header><span>02</span><h3 data-i18n="guide.step2">Register</h3></header>
+            <p data-i18n="guide.step2Body">Register the native custom element once in your browser entry.</p>
+            <pre><code>import "@web-git-graph/web/register";
+
+&lt;web-git-graph id="history" /&gt;</code></pre>
+            <button class="code-copy" type="button" data-copy='import "@web-git-graph/web/register";' data-i18n="common.copy">Copy</button>
+          </article>
+          <article class="step reveal">
+            <header><span>03</span><h3 data-i18n="guide.step3">Connect</h3></header>
+            <p data-i18n="guide.step3Body">Choose a provider and assign it directly to the element.</p>
+            <pre><code>const graph = document.querySelector("#history");
+graph.provider = new GitHubGitGraphProvider({
+  repository: "GIS-Info/web-git-graph"
+});</code></pre>
+            <button class="code-copy" type="button" data-copy='graph.provider = new GitHubGitGraphProvider({ repository: "GIS-Info/web-git-graph" });' data-i18n="common.copy">Copy</button>
+          </article>
+        </div>
+      </section>
+
+      <section class="providers-section shell" id="providers">
+        <div class="providers-intro reveal">
+          <p class="section-kicker"><span>04</span><span data-i18n="providers.kicker">Choose your data path</span></p>
+          <h2 data-i18n="providers.title">The UI stays the same. The provider is yours.</h2>
+        </div>
+        <div class="provider-grid">
+          <article class="provider-card reveal">
+            <div class="provider-top"><span>01</span><i>⌁</i></div>
+            <h3 data-i18n="providers.github.title">Browser direct</h3>
+            <p data-i18n="providers.github.body">Read a public GitHub repository directly from the browser.</p>
             <code>@web-git-graph/web/providers/github</code>
           </article>
-          <article>
-            <b>02</b>
-            <div class="provider-icon" aria-hidden="true">⇄</div>
-            <h3>HTTP protocol</h3>
-            <p>Use any language or framework behind a versioned JSON contract.</p>
+          <article class="provider-card featured reveal">
+            <div class="provider-top"><span>02</span><i>⇄</i></div>
+            <h3 data-i18n="providers.http.title">HTTP protocol</h3>
+            <p data-i18n="providers.http.body">Connect any backend through the versioned, language-neutral HTTP contract.</p>
             <code>@web-git-graph/web/providers/http</code>
           </article>
-          <article>
-            <b>03</b>
-            <div class="provider-icon" aria-hidden="true">⌘</div>
-            <h3>Local Git</h3>
-            <p>Read worktrees, stashes and diffs through a hardened Node backend.</p>
+          <article class="provider-card reveal">
+            <div class="provider-top"><span>03</span><i>⌘</i></div>
+            <h3 data-i18n="providers.local.title">Local Git</h3>
+            <p data-i18n="providers.local.body">Serve worktrees, stashes, comparisons, and diffs from Node.</p>
             <code>@web-git-graph/node</code>
           </article>
         </div>
       </section>
 
-      <footer>
-        <a class="wordmark footer-mark" href="./" aria-label="Web Git Graph home">
-          <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <section class="closing shell reveal">
+        <img src="./brand/web-git-graph-logo.png" alt="" />
+        <p class="section-kicker" data-i18n="closing.kicker">Bring a desktop-grade Git graph to the web.</p>
+        <h2 data-i18n="closing.title">History is easier to trust when you can see it.</h2>
+        <div class="hero-actions">
+          <a class="button primary" href="#demo" data-i18n="closing.demo">Open the demo</a>
+          <a class="button quiet" href="https://github.com/GIS-Info/web-git-graph" data-i18n="closing.github">View on GitHub ↗</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <a class="wordmark" href="#top" aria-label="Web Git Graph home">
+          <span class="logo-frame"><img src="./brand/web-git-graph-logo.png" alt="" /></span>
           <span>Web Git Graph</span>
         </a>
-        <span>MIT · v0.1.0 · Built for quiet focus</span>
-      </footer>
-    </main>
+        <p data-i18n="footer.tagline">Framework-free Git history for the web.</p>
+        <span>MIT · v0.1.0</span>
+      </div>
+    </footer>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

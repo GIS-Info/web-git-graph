@@ -11,7 +11,7 @@ test("renders the graph and opens commit details", async ({ page }) => {
   await gotoDemo(page);
   const graph = page.locator("web-git-graph");
   await expect(graph).toBeVisible();
-  await expect(page.getByRole("heading", { name: /commit dag/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /git history/i })).toBeVisible();
 
   const firstRow = graph.locator(".row").first();
   const secondRow = graph.locator(".row").nth(1);
@@ -43,8 +43,31 @@ test("filters commits and switches theme", async ({ page }) => {
   await expect(graph.locator(".empty")).toBeVisible();
   await graph.locator(".search").fill("provider");
   await expect(graph.locator(".row")).toHaveCount(1);
+  const initialTheme = await graph.getAttribute("theme");
   await graph.locator(".theme-toggle").click();
-  await expect(graph).toHaveAttribute("theme", "light");
+  await expect(graph).toHaveAttribute(
+    "theme",
+    initialTheme === "light" ? "dark" : "light"
+  );
+});
+
+test("switches and persists page language and theme", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await gotoDemo(page);
+  const graph = page.locator("web-git-graph");
+
+  await page.getByRole("button", { name: "中文", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expect(page.getByRole("heading", { name: /让 Git 历史/i })).toBeVisible();
+
+  await page.getByRole("button", { name: "切换到深色主题", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(graph).toHaveAttribute("theme", "dark");
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(graph).toHaveAttribute("theme", "dark");
 });
 
 test("keeps graph lanes visible while a commit row is hovered", async ({ page }) => {
