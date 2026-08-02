@@ -1,0 +1,19 @@
+apps/demo/vite.config.ts
+  s_81a0f7c09a80b5::t_f03bf0d5cf1c61 20-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "25c873256e689ea24e6355899cd983d47cbd714e",
+  "prompts": {},
+  "sessions": {
+    "s_81a0f7c09a80b5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e93154c9-400a-4d39-b9c8-9a60a4e35924",
+        "model": "claude-fable-5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
