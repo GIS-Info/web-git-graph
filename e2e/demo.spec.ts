@@ -49,23 +49,22 @@ test("filters commits and switches theme", async ({ page }) => {
 test("keeps graph lanes visible while a commit row is hovered", async ({ page }) => {
   await gotoDemo(page);
   const graph = page.locator("web-git-graph");
-  const row = graph.locator(".row").nth(1);
-  const node = graph.locator(".graph circle").nth(1);
-  await row.scrollIntoViewIfNeeded();
-  const box = await node.boundingBox();
-  expect(box).not.toBeNull();
+  await graph.locator(".row").nth(1).hover();
 
-  const clip = {
-    x: Math.floor(box!.x + box!.width / 2),
-    y: Math.floor(box!.y + box!.height / 2),
-    width: 1,
-    height: 1
-  };
-  const before = await page.screenshot({ clip });
-  await row.hover();
-  const after = await page.screenshot({ clip });
-
-  expect(after.equals(before)).toBe(true);
+  // Pixel comparisons are unstable across renderers, so assert the paint
+  // order directly: with hit-testing enabled on the lane SVG, the topmost
+  // element at a node centre must be the commit circle, not the hovered row.
+  const topmost = await graph.evaluate((element) => {
+    const root = element.shadowRoot!;
+    const svg = root.querySelector<SVGSVGElement>(".graph")!;
+    const node = svg.querySelectorAll("circle")[1]!;
+    const box = node.getBoundingClientRect();
+    svg.style.pointerEvents = "auto";
+    const hit = root.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    svg.style.pointerEvents = "";
+    return hit?.tagName.toLowerCase() ?? null;
+  });
+  expect(topmost).toBe("circle");
 });
 
 test("connects the demo to the local Node backend through HTTP", async ({ page }) => {
