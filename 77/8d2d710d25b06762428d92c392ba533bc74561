@@ -1,0 +1,25 @@
+README.md
+  s_44ee3659e07d62::t_b2c2ec0f148bf1 2
+apps/demo/src/style.css
+  s_44ee3659e07d62::t_b2c2ec0f148bf1 131-132,137,140,343-344,657,738
+apps/demo/public/brand/web-git-graph-logo.svg
+  s_44ee3659e07d62::t_b2c2ec0f148bf1 1-25
+apps/demo/index.html
+  s_44ee3659e07d62::t_b2c2ec0f148bf1 11,20,99,310,323
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "778d2d710d25b06762428d92c392ba533bc74561",
+  "prompts": {},
+  "sessions": {
+    "s_44ee3659e07d62": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa38c-e56d-76c2-9eda-099324e58825",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
