@@ -7,7 +7,7 @@ Security fixes are provided for the latest published minor release.
 ## Reporting
 
 Please report vulnerabilities privately through GitHub Security Advisories for
-`kian-zh/web-git-graph`. Do not include repository contents, credentials, or
+`GIS-Info/web-git-graph`. Do not include repository contents, credentials, or
 private patches in a public issue.
 
 ## Node backend trust boundary

@@ -5,10 +5,10 @@
   "type": "module",
   "license": "MIT",
   "author": "kian-zh",
-  "homepage": "https://github.com/kian-zh/web-git-graph",
+  "homepage": "https://github.com/GIS-Info/web-git-graph",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kian-zh/web-git-graph.git",
+    "url": "git+https://github.com/GIS-Info/web-git-graph.git",
     "directory": "packages/node"
   },
   "files": [

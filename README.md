@@ -15,7 +15,7 @@ The repository is split into four modules with one-way dependencies:
  @web-git-graph/vscode
 ```
 
-[Live demo](https://kian-zh.github.io/web-git-graph/) ·
+[Live demo](https://gis-info.github.io/web-git-graph/) ·
 [Architecture](./docs/architecture/four-module-split-plan.md) ·
 [Security](./SECURITY.md)
 
@@ -43,7 +43,7 @@ npm install @web-git-graph/protocol @web-git-graph/web
   import { GitHubGitGraphProvider } from "@web-git-graph/web/providers/github";
 
   document.querySelector("#history").provider =
-    new GitHubGitGraphProvider({ repository: "kian-zh/web-git-graph" });
+    new GitHubGitGraphProvider({ repository: "GIS-Info/web-git-graph" });
 </script>
 ```
 
