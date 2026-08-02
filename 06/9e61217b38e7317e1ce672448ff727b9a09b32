@@ -1,0 +1,19 @@
+e2e/demo.spec.ts
+  s_1f055028d9877b::t_ac1c70b47d493b 52,54-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "069e61217b38e7317e1ce672448ff727b9a09b32",
+  "prompts": {},
+  "sessions": {
+    "s_1f055028d9877b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "39fc6dd7-7250-415b-93cd-e879dd08607f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
