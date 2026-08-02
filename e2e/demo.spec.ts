@@ -1,7 +1,14 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+// Web fonts finishing to load between two measurements shifts the layout by a
+// pixel and breaks geometry and pixel assertions on slower CI runners.
+async function gotoDemo(page: Page, url = "/web-git-graph/"): Promise<void> {
+  await page.goto(url);
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+}
 
 test("renders the graph and opens commit details", async ({ page }) => {
-  await page.goto("/web-git-graph/");
+  await gotoDemo(page);
   const graph = page.locator("web-git-graph");
   await expect(graph).toBeVisible();
   await expect(page.getByRole("heading", { name: /commit dag/i })).toBeVisible();
@@ -29,7 +36,7 @@ test("renders the graph and opens commit details", async ({ page }) => {
 });
 
 test("filters commits and switches theme", async ({ page }) => {
-  await page.goto("/web-git-graph/");
+  await gotoDemo(page);
   const graph = page.locator("web-git-graph");
   await graph.locator(".search").fill("octopus-does-not-exist");
   await expect(graph.locator(".empty")).toBeVisible();
@@ -40,7 +47,7 @@ test("filters commits and switches theme", async ({ page }) => {
 });
 
 test("keeps graph lanes visible while a commit row is hovered", async ({ page }) => {
-  await page.goto("/web-git-graph/");
+  await gotoDemo(page);
   const graph = page.locator("web-git-graph");
   const row = graph.locator(".row").nth(1);
   const node = graph.locator(".graph circle").nth(1);
@@ -62,7 +69,8 @@ test("keeps graph lanes visible while a commit row is hovered", async ({ page })
 });
 
 test("connects the demo to the local Node backend through HTTP", async ({ page }) => {
-  await page.goto(
+  await gotoDemo(
+    page,
     "/web-git-graph/?backend=http://127.0.0.1:4174&repository=local"
   );
   const graph = page.locator("web-git-graph");

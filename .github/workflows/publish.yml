@@ -1,4 +1,4 @@
-name: Publish package
+name: Publish packages
 
 on:
   release:
@@ -21,9 +21,20 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
-      - run: npm install --global npm@latest
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter web-git-graph test
-      - run: pnpm --filter web-git-graph build
-      - run: npm publish
-        working-directory: packages/web-git-graph
+      - run: pnpm check:boundaries
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm pack:check
+      # pnpm publish rewrites workspace:* dependencies to the real versions;
+      # order follows the dependency graph (protocol first).
+      - run: pnpm --filter @web-git-graph/protocol publish --access public --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: pnpm --filter @web-git-graph/web publish --access public --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: pnpm --filter @web-git-graph/node publish --access public --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

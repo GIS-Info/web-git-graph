@@ -27,8 +27,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter web-git-graph build
-      - run: pnpm --filter @web-git-graph/demo build
+      - run: pnpm --filter @web-git-graph/demo... build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
