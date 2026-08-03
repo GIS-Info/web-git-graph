@@ -1,0 +1,23 @@
+packages/web/src/events.ts
+  s_22ebc5ce28f78e::t_95f3f7b1eb62e0 4-5,14-15
+packages/web/src/web-component.ts
+  s_22ebc5ce28f78e::t_bad96ac0d19aa2 1141
+packages/web/package.json
+  s_22ebc5ce28f78e::t_d5d1b0351bc593 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "fbaa38e5113f556158e49c48b043a8b651f1a252",
+  "prompts": {},
+  "sessions": {
+    "s_22ebc5ce28f78e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "095033a0-2478-423d-93f3-f17d0859397a",
+        "model": "claude-fable-5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
