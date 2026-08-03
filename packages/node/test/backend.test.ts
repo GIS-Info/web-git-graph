@@ -114,6 +114,21 @@ describe("LocalGitBackend", () => {
     }
   });
 
+  it("reads file contents at a specific revision", async () => {
+    const head = await git("rev-parse", "HEAD");
+    const file = await backend.getFileContent("test", { kind: "commit", oid: head }, "README.md");
+    expect(file.content).toBe("# two\n");
+    expect(file.binary).toBe(false);
+    expect(file.truncated).toBe(false);
+
+    await expect(
+      backend.getFileContent("test", { kind: "commit", oid: head }, "missing.txt")
+    ).rejects.toMatchObject({ code: "revision_not_found" });
+    await expect(
+      backend.getFileContent("test", { kind: "working-tree" }, "README.md")
+    ).rejects.toMatchObject({ code: "unsupported" });
+  });
+
   it("rejects paths outside allowedRoots and revision expressions", async () => {
     const denied = new LocalGitBackend({
       repositories: { denied: tmpdir() },

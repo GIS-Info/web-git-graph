@@ -2,6 +2,7 @@ export {
   LocalGitBackend,
   MemorySnapshotStore,
   type GitGraphBackend,
+  type GitGraphFileContent,
   type GitGraphSnapshot,
   type LocalGitBackendOptions,
   type SnapshotStore

@@ -48,6 +48,20 @@ export interface GitGraphBackend {
     context?: number,
     signal?: AbortSignal
   ): Promise<GitGraphFileDiff>;
+  getFileContent?(
+    repositoryId: string,
+    revision: GitGraphRevision,
+    path: string,
+    signal?: AbortSignal
+  ): Promise<GitGraphFileContent>;
+}
+
+export interface GitGraphFileContent {
+  revision: GitGraphRevision;
+  path: string;
+  content: string;
+  binary: boolean;
+  truncated: boolean;
 }
 
 export interface GitGraphSnapshot {
@@ -572,6 +586,44 @@ export class LocalGitBackend implements GitGraphBackend {
       ...(result.stdout
         ? { patch: result.stdout, ...(result.truncated ? { truncated: true } : {}) }
         : { unavailableReason: "No textual patch is available for this file." })
+    };
+  }
+
+  async getFileContent(
+    repositoryId: string,
+    revision: GitGraphRevision,
+    path: string,
+    signal?: AbortSignal
+  ): Promise<GitGraphFileContent> {
+    const repository = await this.#resolveRepository(repositoryId, signal);
+    if (!path || path.includes("\0")) {
+      throw new GitGraphProtocolError("bad_request", "A valid repository-relative file path is required.");
+    }
+    if (revision.kind === "working-tree") {
+      throw new GitGraphProtocolError(
+        "unsupported",
+        "Working-tree file contents must be read from the file system by the caller."
+      );
+    }
+    const oid = await this.#verifyOid(repository, revision.oid, signal);
+    const result = await this.#run(repository.path, ["show", `${oid}:${path}`], {
+      signal,
+      maxBytes: this.#maxDiffBytes,
+      allowTruncation: true,
+      allowFailure: true
+    });
+    if (result.code !== 0) {
+      throw new GitGraphProtocolError(
+        "revision_not_found",
+        `${path} does not exist at ${oid}.`
+      );
+    }
+    return {
+      revision,
+      path,
+      content: result.stdout,
+      binary: result.stdout.includes("\0"),
+      truncated: result.truncated === true
     };
   }
 
