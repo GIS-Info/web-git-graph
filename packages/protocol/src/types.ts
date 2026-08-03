@@ -99,6 +99,8 @@ export interface GitGraphCapabilities {
 
 export interface GitGraphHistoryQuery {
   ref?: string;
+  /** Union of tips to walk. Takes precedence over `ref` when non-empty. */
+  refs?: readonly string[];
   cursor?: string;
   limit?: number;
   includeWorkingTree?: boolean;
