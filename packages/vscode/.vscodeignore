@@ -3,6 +3,8 @@
 node_modules/**
 src/**
 test/**
+test-results/**
+coverage/**
 webview/**
 tsconfig.json
 tsup.config.ts

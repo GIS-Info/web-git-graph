@@ -43,14 +43,19 @@ export function activate(context: vscode.ExtensionContext): void {
   };
   // Detects repositories created or removed after startup (e.g. git init).
   const headWatcher = vscode.workspace.createFileSystemWatcher("**/.git/HEAD");
+  const rescan = () => {
+    invalidateRepositories();
+    void updateStatusBarItem();
+  };
   context.subscriptions.push(
     statusBarItem,
     headWatcher,
-    headWatcher.onDidCreate(() => void updateStatusBarItem()),
-    headWatcher.onDidDelete(() => void updateStatusBarItem()),
-    vscode.workspace.onDidChangeWorkspaceFolders(() => void updateStatusBarItem()),
+    headWatcher.onDidCreate(rescan),
+    headWatcher.onDidDelete(rescan),
+    vscode.workspace.onDidChangeWorkspaceFolders(rescan),
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("webGitGraph.showStatusBarItem")) {
+      if (event.affectsConfiguration("webGitGraph.maxDepthOfRepoSearch")) rescan();
+      else if (event.affectsConfiguration("webGitGraph.showStatusBarItem")) {
         void updateStatusBarItem();
       }
     })
@@ -163,11 +168,22 @@ async function scanForRepositories(
   await walk("", 0);
 }
 
+let detected: { key: string; repositories: Map<string, DetectedRepository> } | undefined;
+let detecting: Promise<Map<string, DetectedRepository>> | undefined;
+
+/** Called when a repository may have appeared or disappeared on disk. */
+function invalidateRepositories(): void {
+  detected = undefined;
+}
+
 /**
  * Ids stay tied to a workspace folder index plus the repository's path inside
  * it, so they survive a rescan and never carry an absolute path across the
  * webview seam. Folders without a repository are skipped, so one plain folder
  * in a multi-root workspace cannot break the repository listing.
+ *
+ * The result is cached: every request would otherwise walk the workspace tree
+ * again, which shows up as latency on each commit the user opens.
  */
 async function detectRepositories(): Promise<Map<string, DetectedRepository>> {
   const folders = vscode.workspace.workspaceFolders ?? [];
@@ -178,13 +194,21 @@ async function detectRepositories(): Promise<Map<string, DetectedRepository>> {
       vscode.workspace.getConfiguration("webGitGraph").get<number>("maxDepthOfRepoSearch", 2)
     )
   );
-  const found = new Map<string, DetectedRepository>();
-  await Promise.all(
-    folders.map((folder, index) =>
-      scanForRepositories(folder, `workspace-${index}`, maxDepth, found)
-    )
-  );
-  return found;
+  const key = [...folders.map((folder) => folder.uri.toString()), maxDepth].join("\n");
+  if (detected?.key === key) return detected.repositories;
+  // Concurrent requests share one scan instead of each starting their own.
+  detecting ??= (async () => {
+    const found = new Map<string, DetectedRepository>();
+    await Promise.all(
+      folders.map((folder, index) =>
+        scanForRepositories(folder, `workspace-${index}`, maxDepth, found)
+      )
+    );
+    detected = { key, repositories: found };
+    detecting = undefined;
+    return found;
+  })();
+  return detecting;
 }
 
 /**
