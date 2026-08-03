@@ -17,4 +17,12 @@ export interface WebGitGraphElementEventMap {
   }>;
   "gitgraph-load-more": CustomEvent<{ cursor?: string }>;
   "gitgraph-error": CustomEvent<{ error: unknown }>;
+  /** Cancel to take over refreshing (the host may reload the data itself). */
+  "gitgraph-refresh": CustomEvent<{ repositoryId?: string }>;
+  /** Cancel to replace the built-in commit context menu with a host menu. */
+  "gitgraph-context-menu": CustomEvent<{
+    commit: GitGraphCommit;
+    clientX: number;
+    clientY: number;
+  }>;
 }

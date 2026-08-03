@@ -176,7 +176,12 @@ export class GitHubGitGraphProvider implements GitGraphProvider {
 
   async getHistory(request: GitGraphHistoryRequest = {}): Promise<GitGraphPage> {
     const repository = await this.#getRepository(request.signal);
-    const parsed = parseCursor(request.cursor, request.ref ?? repository.default_branch);
+    // The REST commits endpoint walks a single tip, so a multi-ref request
+    // falls back to its first entry.
+    const parsed = parseCursor(
+      request.cursor,
+      request.refs?.[0] ?? request.ref ?? repository.default_branch
+    );
     const limit = Math.min(100, Math.max(1, request.limit ?? this.#pageSize));
     const commits = await this.#request<GitHubCommit[]>(
       `/repos/${this.owner}/${this.repo}/commits?sha=${encodeURIComponent(parsed.ref)}&per_page=${limit}&page=${parsed.page}`,

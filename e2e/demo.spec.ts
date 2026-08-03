@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+const BACKEND_DEMO = "/web-git-graph/?backend=http://127.0.0.1:4174&repository=local";
+
 // Web fonts finishing to load between two measurements shifts the layout by a
 // pixel and breaks geometry and pixel assertions on slower CI runners.
 async function gotoDemo(page: Page, url = "/web-git-graph/"): Promise<void> {
@@ -71,6 +73,158 @@ test("search keeps focus and matches while typing key by key", async ({ page }) 
   await expect(search).toHaveValue("provider");
   await expect(search).toBeFocused();
   await expect(graph.locator(".search-count")).toHaveText("1/1");
+});
+
+test("renders compact slashed dates and honours the column and date settings", async ({ page }) => {
+  await gotoDemo(page);
+  const graph = page.locator("web-git-graph");
+  const date = graph.locator(".row .date").first();
+  await expect(date).toHaveText(/^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}$/);
+
+  await graph.evaluate((element) => element.setAttribute("date-format", "date"));
+  await expect(date).toHaveText(/^\d{4}\/\d{2}\/\d{2}$/);
+  await graph.evaluate((element) => element.setAttribute("date-format", "relative"));
+  await expect(date).not.toHaveText(/^\d{4}\//);
+
+  // Hiding a column collapses its track instead of shifting the others.
+  await graph.evaluate((element) => element.setAttribute("columns", "commit"));
+  await expect(graph.locator(".row .date").first()).toBeHidden();
+  await expect(graph.locator(".row .author").first()).toBeHidden();
+  await expect(graph.locator(".row .oid").first()).toBeVisible();
+});
+
+test("emphasises the checked-out branch with a solid chip", async ({ page }) => {
+  await gotoDemo(page);
+  const graph = page.locator("web-git-graph");
+  const alpha = async (selector: string): Promise<number> => {
+    const colour = await graph.locator(selector).first().evaluate(
+      (element) => getComputedStyle(element).backgroundColor
+    );
+    const channels = colour.match(/[\d.]+/g) ?? [];
+    return channels.length >= 4 ? Number(channels[3]) : 1;
+  };
+  // The current branch is filled; every other branch is a translucent tint
+  // inside a lane-coloured border.
+  expect(await alpha(".ref.current")).toBe(1);
+  expect(await alpha(".ref.head:not(.current)")).toBeLessThan(1);
+});
+
+test("shows author avatars only when enabled", async ({ page }) => {
+  // Gravatar is never reached in tests; the locally drawn initial must stand in.
+  await page.route("**gravatar.com/**", (route) => route.abort());
+  await gotoDemo(page);
+  const graph = page.locator("web-git-graph");
+  await expect(graph.locator(".row .avatar")).toHaveCount(0);
+
+  await graph.evaluate((element) => element.setAttribute("avatars", ""));
+  const avatar = graph.locator(".row .avatar").first();
+  await expect(avatar).toBeVisible();
+  await expect(avatar).toHaveText(/^[A-Z0-9?]$/);
+});
+
+test("opens a commit context menu without disturbing the selection", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await gotoDemo(page);
+  const graph = page.locator("web-git-graph");
+  const row = graph.locator(".row").nth(1);
+
+  await row.click({ button: "right" });
+  const menu = graph.locator(".menu[data-menu='commit']");
+  await expect(menu).toBeVisible();
+  // Right-clicking must not open, close or re-animate the details panel.
+  await expect(graph.locator(".inline-details")).toHaveCount(0);
+
+  const oid = (await row.locator(".oid").textContent())?.trim();
+  await menu.getByText("Copy Commit Hash").click();
+  await expect(menu).toHaveCount(0);
+  const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clipboard.startsWith(oid!)).toBe(true);
+
+  // The same gesture on a selected row leaves the open panel in place.
+  await row.click();
+  await expect(graph.locator(".inline-details")).toBeVisible();
+  await row.click({ button: "right" });
+  await expect(graph.locator(".menu[data-menu='commit']")).toBeVisible();
+  await expect(graph.locator(".inline-details")).toBeVisible();
+  await expect(graph.locator(".row.selected")).toHaveCount(1);
+});
+
+test("does not replay the details animation when the window re-renders", async ({ page }) => {
+  await gotoDemo(page, BACKEND_DEMO);
+  const graph = page.locator("web-git-graph");
+  await expect(graph.locator(".repository-name")).toHaveText("web-git-graph");
+  await graph.locator(".row").nth(1).click();
+  const details = graph.locator(".inline-details");
+  await expect(details).toBeVisible();
+
+  // The open animation must run exactly once. Re-rendering the window — a
+  // scroll tick, a right-click, any state change — used to recreate the panel
+  // node and replay the fade, which is what read as a flicker.
+  const replayed = await graph.evaluate(async (element) => {
+    const root = element.shadowRoot!;
+    const scroller = root.querySelector<HTMLElement>(".scroller")!;
+    const panel = root.querySelector<HTMLElement>(".inline-details")!;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    if (panel.getAnimations().length > 0) return "animation still running before the test";
+    scroller.scrollTop += 40;
+    scroller.dispatchEvent(new Event("scroll"));
+    const current = root.querySelector<HTMLElement>(".inline-details");
+    if (current !== panel) return "panel node was recreated";
+    return current.getAnimations().length > 0 ? "animation replayed" : "";
+  });
+  expect(replayed).toBe("");
+  await expect(details).toBeVisible();
+});
+
+test("filters history by several branches at once", async ({ page }) => {
+  await gotoDemo(page, BACKEND_DEMO);
+  const graph = page.locator("web-git-graph");
+  await expect(graph.locator(".repository-name")).toHaveText("web-git-graph");
+  // Each tick re-requests the history; the walked tips travel as repeated
+  // `ref` query parameters.
+  const walkedRefs: string[][] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.endsWith("/history")) walkedRefs.push(url.searchParams.getAll("ref"));
+  });
+
+  await graph.locator(".ref-select").click();
+  const menu = graph.locator(".menu[data-menu='refs']");
+  await expect(menu).toBeVisible();
+  await expect(menu.locator(".menu-item").first()).toContainText("Show All");
+  await expect(menu.locator(".menu-group", { hasText: "Local Branches" })).toBeVisible();
+
+  const branch = menu.locator(".menu-item").nth(1);
+  const branchName = (await branch.locator(".menu-label").textContent())!.trim();
+  await branch.click();
+  await expect(graph.locator(".ref-select-label")).toHaveText(branchName);
+  await expect(branch.locator(".menu-check")).toHaveText("✓");
+  await expect.poll(() => walkedRefs.at(-1)).toEqual([`refs/heads/${branchName}`]);
+
+  // The menu stays open so a second ref can be ticked in the same pass.
+  await expect(menu).toBeVisible();
+  const tag = menu.locator(".menu-item").last();
+  await tag.click();
+  await expect(graph.locator(".ref-select-label")).toHaveText("2 selected");
+  await expect.poll(() => walkedRefs.at(-1)?.length).toBe(2);
+  await expect(graph.locator(".row").first()).toBeVisible();
+
+  await graph.locator(".ref-select").click();
+  await expect(menu).toHaveCount(0);
+});
+
+test("refresh reloads the graph from the provider", async ({ page }) => {
+  await gotoDemo(page, BACKEND_DEMO);
+  const graph = page.locator("web-git-graph");
+  await expect(graph.locator(".repository-name")).toHaveText("web-git-graph");
+
+  const requests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/history")) requests.push(request.url());
+  });
+  await graph.locator(".refresh").click();
+  await expect.poll(() => requests.length).toBeGreaterThan(0);
+  await expect(graph.locator(".row").first()).toBeVisible();
 });
 
 test("switches and persists page language and theme", async ({ page }) => {
@@ -158,10 +312,7 @@ test("keeps lane curves compact while commit details are expanded", async ({ pag
 });
 
 test("connects the demo to the local Node backend through HTTP", async ({ page }) => {
-  await gotoDemo(
-    page,
-    "/web-git-graph/?backend=http://127.0.0.1:4174&repository=local"
-  );
+  await gotoDemo(page, BACKEND_DEMO);
   const graph = page.locator("web-git-graph");
 
   await expect(page.locator("#status")).toContainText("127.0.0.1:4174");

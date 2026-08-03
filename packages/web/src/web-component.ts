@@ -13,6 +13,14 @@ import type { GitGraphProvider } from "./provider";
 
 const ELEMENT_NAME = "web-git-graph";
 const PALETTE = ["#e3008c", "#007acc", "#00c853", "#ff8c00", "#b180d7", "#00b7c3", "#dcdcaa"];
+/** Kinds whose chip takes the lane colour; tags and stashes carry their own. */
+const LANE_COLOURED_REFS = new Set(["current", "head", "remote"]);
+/**
+ * Ctrl-click is the system context-menu gesture on Apple platforms, so it must
+ * not double as the comparison modifier there.
+ */
+const IS_APPLE =
+  typeof navigator !== "undefined" && /mac|iphone|ipad|ipod/i.test(navigator.userAgent ?? "");
 
 const STYLES = `
 :host {
@@ -59,7 +67,7 @@ const STYLES = `
 * { box-sizing: border-box; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
-.shell { min-height: inherit; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.shell { position: relative; min-height: inherit; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
 .toolbar {
   min-height: 42px;
   display: flex;
@@ -72,8 +80,14 @@ button { cursor: pointer; }
 }
 .branch-control, .remote-control { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
 .branch-control strong, .remote-control { font-weight: 600; }
-.branch-control select { width: min(250px, 28vw); }
 .remote-control input { margin: 0; accent-color: var(--wgg-accent); }
+.ref-select {
+  height: 28px; max-width: min(250px, 28vw); display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--wgg-line); background: var(--wgg-bg); border-radius: 2px; padding: 3px 7px;
+}
+.ref-select:hover { background: var(--wgg-hover); }
+.ref-select-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.caret { flex: none; color: var(--wgg-muted); font-size: 9px; }
 .repository-name {
   min-width: 0; flex: 1; color: var(--wgg-muted); overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; text-align: center;
@@ -137,18 +151,58 @@ select, .icon-button {
 .refs { flex: 0 1 auto; display: flex; gap: 2px; min-width: 0; overflow: hidden; }
 .ref {
   max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font: 10px/15px var(--wgg-font); padding: 0 5px; border: 1px solid var(--ref-color, var(--wgg-accent));
-  color: var(--wgg-ink); border-radius: 2px;
+  font: 600 10px/15px var(--wgg-font); padding: 0 5px; border-radius: 2px;
+  border: 1px solid var(--ref-color, var(--wgg-accent));
+  background: color-mix(in srgb, var(--ref-color, var(--wgg-accent)) 18%, transparent);
+  color: var(--wgg-ink);
 }
-.ref.current, .ref.head { background: var(--ref-color, var(--wgg-accent)); color: #fff; }
-.ref.remote { border-color: var(--wgg-faint); color: var(--wgg-muted); }
-.ref.tag { background: #0e639c; border-color: #0e639c; color: #fff; }
-.ref.stash { background: #9b2f86; border-color: #9b2f86; color: #fff; }
+/* Only the checked-out branch is solid, so "you are here" reads at a glance
+   while every other branch is emphasised by its lane-coloured border. */
+.ref.current { background: var(--ref-color, var(--wgg-accent)); color: #fff; }
+.ref.remote { border-style: dashed; font-weight: 400; }
+.ref.tag, .ref.stash { background: var(--ref-color); color: #fff; }
+.ref.tag { --ref-color: #0e639c; }
+.ref.stash { --ref-color: #9b2f86; }
 .author, .date, .oid {
   min-width: 0; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   color: var(--wgg-ink);
 }
 .date, .author { text-align: center; }
+.author { display: flex; align-items: center; justify-content: center; gap: 5px; }
+.author-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.avatar {
+  position: relative; flex: none; width: 16px; height: 16px; border-radius: 50%; overflow: hidden;
+  display: grid; place-items: center; font: 600 9px/1 var(--wgg-font); color: #fff;
+  background: var(--avatar-color, var(--wgg-faint));
+}
+.avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.shell[data-hide-date] { --wgg-date-width: 0px; }
+.shell[data-hide-author] { --wgg-author-width: 0px; }
+.shell[data-hide-commit] { --wgg-commit-width: 0px; }
+.shell[data-hide-date] .col-date, .shell[data-hide-date] .date,
+.shell[data-hide-author] .col-author, .shell[data-hide-author] .author,
+.shell[data-hide-commit] .col-commit, .shell[data-hide-commit] .oid {
+  padding: 0; border-right: 0; visibility: hidden;
+}
+.menu {
+  position: absolute; z-index: 20; min-width: 190px; max-width: min(320px, 90%); padding: 4px;
+  background: var(--wgg-panel-raised); border: 1px solid var(--wgg-line); border-radius: 4px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 32%); font-size: 12px;
+}
+.menu-scroll { max-height: min(340px, 55vh); overflow: auto; scrollbar-color: var(--wgg-faint) transparent; }
+.menu-item {
+  width: 100%; display: flex; align-items: center; gap: 8px; padding: 4px 8px;
+  border: 0; border-radius: 2px; background: transparent; text-align: left; white-space: nowrap;
+}
+.menu-item:hover:not(:disabled) { background: var(--wgg-hover); }
+.menu-item:disabled { color: var(--wgg-faint); cursor: default; }
+.menu-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.menu-check { flex: none; width: 12px; text-align: center; color: var(--wgg-accent); }
+.menu-group {
+  padding: 6px 8px 2px; color: var(--wgg-muted); font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.menu-separator { height: 1px; margin: 4px 2px; background: var(--wgg-line); }
 .oid { font-family: var(--wgg-mono); font-size: 11px; text-align: center; }
 .graph {
   position: absolute; z-index: 4; pointer-events: none; overflow: visible;
@@ -220,10 +274,10 @@ select, .icon-button {
 @media (max-width: 760px) {
   .toolbar { gap: 8px; }
   .remote-control, .repository-name, .find { display: none; }
-  .branch-control { flex: 1; }
-  .branch-control select { width: 100%; }
+  .branch-control { flex: 1; min-width: 0; }
+  .ref-select { flex: 1; max-width: none; }
   .header, .row { grid-template-columns: var(--wgg-graph-width) minmax(220px, 1fr) var(--wgg-commit-width); }
-  .header > :nth-child(3), .header > :nth-child(4), .row > :nth-child(3), .row > :nth-child(4) { display: none; }
+  .col-date, .col-author, .date, .author { display: none; }
   .inline-details { flex-direction: column; padding-left: 12px; }
   .details-files { border-left: 0; border-top: 1px solid var(--wgg-line); }
 }
@@ -242,17 +296,66 @@ function shortOid(oid: string): string {
   return oid.startsWith("__") ? oid.replaceAll("_", "") : oid.slice(0, 8);
 }
 
-function formatDate(value?: string): string {
+function shortRefName(name: string): string {
+  return name.replace(/^refs\/(heads|tags|remotes)\//, "");
+}
+
+export type GitGraphDateFormat = "datetime" | "date" | "relative";
+
+const RELATIVE_UNITS: ReadonlyArray<readonly [Intl.RelativeTimeFormatUnit, number]> = [
+  ["year", 31_536_000_000],
+  ["month", 2_592_000_000],
+  ["week", 604_800_000],
+  ["day", 86_400_000],
+  ["hour", 3_600_000],
+  ["minute", 60_000]
+];
+
+function pad(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function formatDate(value: string | undefined, format: GitGraphDateFormat = "datetime"): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    year: "2-digit",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(date);
+  if (format === "relative") {
+    const elapsed = date.valueOf() - Date.now();
+    const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+    for (const [unit, milliseconds] of RELATIVE_UNITS) {
+      if (Math.abs(elapsed) >= milliseconds) {
+        return relative.format(Math.round(elapsed / milliseconds), unit);
+      }
+    }
+    return relative.format(Math.round(elapsed / 1000), "second");
+  }
+  // Slash-joined and zero-padded: narrower than a localised month name and
+  // still scannable as a column.
+  const day = `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())}`;
+  return format === "date" ? day : `${day} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+const AVATAR_URLS = new Map<string, string>();
+const AVATAR_PENDING = new Set<string>();
+
+function avatarColour(email: string): string {
+  let hash = 0;
+  for (let index = 0; index < email.length; index += 1) {
+    hash = (hash * 31 + email.charCodeAt(index)) % 360;
+  }
+  return `hsl(${hash} 44% 40%)`;
+}
+
+/**
+ * Gravatar accepts the SHA-256 of the normalised address. `d=404` keeps authors
+ * without a hosted avatar on the locally drawn initial instead of serving a
+ * generated identicon.
+ */
+async function gravatarUrl(email: string): Promise<string | undefined> {
+  if (typeof crypto === "undefined" || !crypto.subtle) return undefined;
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(email));
+  const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `https://www.gravatar.com/avatar/${hex}?s=48&d=404`;
 }
 
 interface FileTreeNode {
@@ -303,7 +406,7 @@ const HTMLElementBase = (
 ) as typeof HTMLElement;
 
 export class WebGitGraphElement extends HTMLElementBase {
-  static observedAttributes = ["theme", "density"];
+  static observedAttributes = ["theme", "density", "columns", "date-format", "date-type", "avatars"];
 
   #provider?: GitGraphProvider;
   #page: GitGraphPage = { commits: [], refs: [], hasMore: false };
@@ -311,14 +414,18 @@ export class WebGitGraphElement extends HTMLElementBase {
   #search = "";
   #matches: readonly number[] = [];
   #matchCursor = -1;
-  #selectedRef?: string;
-  #refOptionsKey?: string;
+  #selectedRefs: readonly string[] = [];
+  #menu?: HTMLElement;
+  #menuClose?: () => void;
+  #menuSync?: () => void;
   #selectedOid?: string;
   #compareOid?: string;
   #details?: GitGraphCommitDetails;
   #comparison?: GitGraphComparison;
   #fileDiff?: GitGraphFileDiff;
   #collapsedDirs = new Set<string>();
+  #detailsElement?: HTMLElement;
+  #detailsSignature?: string;
   #loading = false;
   #loadingMore = false;
   #error?: string;
@@ -340,8 +447,14 @@ export class WebGitGraphElement extends HTMLElementBase {
     if (this.#provider && this.#page.commits.length === 0) void this.#load(false);
   }
 
+  disconnectedCallback(): void {
+    this.#closeMenu();
+  }
+
   attributeChangedCallback(): void {
     this.#rowHeight = this.getAttribute("density") === "compact" ? 20 : 24;
+    this.#applyColumns();
+    void this.#resolveAvatars();
     this.#renderWindow();
   }
 
@@ -355,7 +468,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     // A new provider is a new data source: the previous page's repositoryId and
     // cursor must not be replayed against it, or the provider's own default
     // repository is shadowed by the stale one.
-    this.#selectedRef = undefined;
+    this.#selectedRefs = [];
     this.#page = {
       ...this.#page,
       repositoryId: undefined,
@@ -388,6 +501,62 @@ export class WebGitGraphElement extends HTMLElementBase {
 
   set density(value: string) {
     this.setAttribute("density", value);
+  }
+
+  /** Comma-separated subset of `date,author,commit`; graph and description always show. */
+  get columns(): string {
+    return this.getAttribute("columns") ?? "date,author,commit";
+  }
+
+  set columns(value: string) {
+    this.setAttribute("columns", value);
+  }
+
+  get dateFormat(): GitGraphDateFormat {
+    const value = this.getAttribute("date-format");
+    return value === "date" || value === "relative" ? value : "datetime";
+  }
+
+  set dateFormat(value: GitGraphDateFormat) {
+    this.setAttribute("date-format", value);
+  }
+
+  get dateType(): "committed" | "authored" {
+    return this.getAttribute("date-type") === "authored" ? "authored" : "committed";
+  }
+
+  set dateType(value: "committed" | "authored") {
+    this.setAttribute("date-type", value);
+  }
+
+  /** Off by default: resolving avatars discloses author addresses to Gravatar. */
+  get avatars(): boolean {
+    const value = this.getAttribute("avatars");
+    return value !== null && value !== "false" && value !== "off";
+  }
+
+  set avatars(value: boolean) {
+    if (value) this.setAttribute("avatars", "");
+    else this.removeAttribute("avatars");
+  }
+
+  /** Refs the history is walked from; empty means every tip. */
+  get refs(): readonly string[] {
+    return this.#selectedRefs;
+  }
+
+  set refs(value: readonly string[]) {
+    this.#applyRefs([...value]);
+  }
+
+  refresh(): void {
+    const event = new CustomEvent("gitgraph-refresh", {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+      detail: { repositoryId: this.#page.repositoryId }
+    });
+    if (this.dispatchEvent(event) && this.#provider) void this.#load(false);
   }
 
   setData(page: GitGraphPage): void {
@@ -497,7 +666,9 @@ export class WebGitGraphElement extends HTMLElementBase {
     this.#layout = layoutGitGraph(this.#page.commits);
     this.#updateMatches(false);
     this.#renderShell();
+    this.#applyColumns();
     this.#updateToolbar();
+    void this.#resolveAvatars();
     this.#renderWindow();
   }
 
@@ -513,7 +684,10 @@ export class WebGitGraphElement extends HTMLElementBase {
       <div class="toolbar">
         <div class="branch-control">
           <strong>Branches:</strong>
-          <select class="ref-select" aria-label="Select branch or tag"><option value="">Show All</option></select>
+          <button class="ref-select" type="button" aria-haspopup="menu" aria-expanded="false"
+            aria-label="Select branches and tags">
+            <span class="ref-select-label">Show All</span><span class="caret">▾</span>
+          </button>
         </div>
         <label class="remote-control">
           <input class="remote-toggle" type="checkbox" checked>
@@ -527,13 +701,16 @@ export class WebGitGraphElement extends HTMLElementBase {
             <button class="icon-button search-prev" type="button" aria-label="Previous match" disabled>↑</button>
             <button class="icon-button search-next" type="button" aria-label="Next match" disabled>↓</button>
           </div>
+          <button class="icon-button refresh" type="button" aria-label="Refresh" title="Refresh">↻</button>
           <button class="icon-button theme-toggle" type="button" aria-label="Toggle theme">◐</button>
         </div>
       </div>
       <div class="body">
         <section class="history">
           <div class="header" aria-hidden="true">
-            <span>Graph</span><span>Description</span><span>Date</span><span>Author</span><span>Commit</span>
+            <span class="col-graph">Graph</span><span class="col-description">Description</span
+            ><span class="col-date">Date</span><span class="col-author">Author</span
+            ><span class="col-commit">Commit</span>
           </div>
           <div class="scroller" role="treegrid" aria-label="Git commit history" tabindex="0">
             <div class="spacer"><div class="window"></div></div>
@@ -565,6 +742,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     });
     shell.querySelector(".search-prev")?.addEventListener("click", () => this.#gotoMatch(-1));
     shell.querySelector(".search-next")?.addEventListener("click", () => this.#gotoMatch(1));
+    shell.querySelector(".refresh")?.addEventListener("click", () => this.refresh());
     shell.querySelector(".theme-toggle")?.addEventListener("click", () => {
       this.theme = this.theme === "light" ? "dark" : "light";
     });
@@ -572,12 +750,13 @@ export class WebGitGraphElement extends HTMLElementBase {
     remoteToggle.checked = this.#showRemoteRefs;
     remoteToggle.addEventListener("change", () => {
       this.#showRemoteRefs = remoteToggle.checked;
+      this.#closeMenu();
       this.#renderWindow();
     });
-    const refSelect = shell.querySelector<HTMLSelectElement>(".ref-select")!;
-    refSelect.addEventListener("change", () => {
-      this.#selectedRef = refSelect.value || undefined;
-      void this.#load(false);
+    const refSelect = shell.querySelector<HTMLButtonElement>(".ref-select")!;
+    refSelect.addEventListener("click", () => {
+      if (this.#menu?.dataset.menu === "refs") this.#closeMenu();
+      else this.#openRefMenu(refSelect);
     });
     const scroller = shell.querySelector<HTMLElement>(".scroller")!;
     scroller.addEventListener("scroll", () => {
@@ -600,27 +779,287 @@ export class WebGitGraphElement extends HTMLElementBase {
     shell.querySelector<HTMLElement>(".repository-name")!.textContent =
       this.#page.repositoryName ?? this.#page.repositoryId ?? "data provider";
 
-    const refSelect = shell.querySelector<HTMLSelectElement>(".ref-select")!;
-    const refs = this.#page.refs.filter(
-      (item) => item.kind === "head" || item.kind === "tag" || item.kind === "remote"
-    );
-    const optionsKey = refs.map((ref) => `${ref.kind}:${ref.name}`).join("\n");
-    if (optionsKey !== this.#refOptionsKey) {
-      this.#refOptionsKey = optionsKey;
-      refSelect.replaceChildren();
-      const all = document.createElement("option");
-      all.value = "";
-      all.textContent = "Show All";
-      refSelect.append(all);
+    const selected = this.#selectedRefs;
+    shell.querySelector<HTMLElement>(".ref-select-label")!.textContent =
+      selected.length === 0
+        ? "Show All"
+        : selected.length === 1
+          ? shortRefName(selected[0]!)
+          : `${selected.length} selected`;
+    this.#updateSearchStatus();
+  }
+
+  #applyColumns(): void {
+    const shell = this.#root.querySelector<HTMLElement>(".shell");
+    if (!shell) return;
+    const attribute = this.getAttribute("columns");
+    const wanted =
+      attribute === null
+        ? undefined
+        : new Set(attribute.split(",").map((name) => name.trim().toLowerCase()).filter(Boolean));
+    for (const column of ["date", "author", "commit"] as const) {
+      shell.toggleAttribute(`data-hide-${column}`, wanted !== undefined && !wanted.has(column));
+    }
+  }
+
+  #openMenu(name: string, anchor?: HTMLElement): HTMLElement {
+    this.#closeMenu();
+    const shell = this.#root.querySelector<HTMLElement>(".shell")!;
+    const menu = document.createElement("div");
+    menu.className = "menu";
+    menu.dataset.menu = name;
+    menu.setAttribute("role", "menu");
+    shell.append(menu);
+    this.#menu = menu;
+    // Pointer events are watched on the document so a click anywhere — including
+    // outside this shadow root — dismisses the menu. The anchor is excluded so
+    // its own click can toggle the menu closed instead of reopening it.
+    const onPointerDown = (event: Event) => {
+      const path = event.composedPath();
+      if (!path.includes(menu) && !(anchor && path.includes(anchor))) this.#closeMenu();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      this.#closeMenu();
+    };
+    const onReflow = () => this.#closeMenu();
+    const scroller = this.#root.querySelector<HTMLElement>(".scroller");
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown, true);
+    scroller?.addEventListener("scroll", onReflow);
+    window.addEventListener("resize", onReflow);
+    this.#menuClose = () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown, true);
+      scroller?.removeEventListener("scroll", onReflow);
+      window.removeEventListener("resize", onReflow);
+      menu.remove();
+    };
+    anchor?.setAttribute("aria-expanded", "true");
+    return menu;
+  }
+
+  #closeMenu(): void {
+    const close = this.#menuClose;
+    this.#menu = undefined;
+    this.#menuClose = undefined;
+    this.#menuSync = undefined;
+    close?.();
+    this.#root.querySelector<HTMLElement>(".ref-select")?.setAttribute("aria-expanded", "false");
+  }
+
+  /** Clamps the menu inside the host so it never spills out of the component. */
+  #positionMenu(menu: HTMLElement, left: number, top: number): void {
+    menu.style.left = "0px";
+    menu.style.top = "0px";
+    const host = this.getBoundingClientRect();
+    const box = menu.getBoundingClientRect();
+    menu.style.left = `${Math.min(Math.max(4, left), Math.max(4, host.width - box.width - 4))}px`;
+    menu.style.top = `${Math.min(Math.max(4, top), Math.max(4, host.height - box.height - 4))}px`;
+  }
+
+  #menuItem(
+    label: string,
+    options: { enabled?: boolean; checked?: boolean; onSelect: () => void }
+  ): HTMLButtonElement {
+    const item = document.createElement("button");
+    item.className = "menu-item";
+    item.type = "button";
+    item.setAttribute("role", "menuitem");
+    item.disabled = options.enabled === false;
+    if (options.checked !== undefined) {
+      const check = document.createElement("span");
+      check.className = "menu-check";
+      check.textContent = options.checked ? "✓" : "";
+      item.append(check);
+    }
+    const text = document.createElement("span");
+    text.className = "menu-label";
+    text.textContent = label;
+    item.append(text);
+    item.addEventListener("click", options.onSelect);
+    return item;
+  }
+
+  #openRefMenu(anchor: HTMLElement): void {
+    const menu = this.#openMenu("refs", anchor);
+    const groups: ReadonlyArray<readonly [string, GitGraphRef["kind"]]> = [
+      ["Local Branches", "head"],
+      ["Remote Branches", "remote"],
+      ["Tags", "tag"]
+    ];
+    const checks = new Map<string, HTMLElement>();
+    const selected = () => new Set(this.#selectedRefs);
+    const allItem = this.#menuItem("Show All", {
+      checked: this.#selectedRefs.length === 0,
+      onSelect: () => this.#applyRefs([])
+    });
+    menu.append(allItem);
+    const scroll = document.createElement("div");
+    scroll.className = "menu-scroll";
+    let count = 0;
+    for (const [heading, kind] of groups) {
+      const refs = this.#page.refs.filter(
+        (ref) => ref.kind === kind && (kind !== "remote" || this.#showRemoteRefs)
+      );
+      if (refs.length === 0) continue;
+      const title = document.createElement("div");
+      title.className = "menu-group";
+      title.textContent = heading;
+      scroll.append(title);
       for (const ref of refs) {
-        const option = document.createElement("option");
-        option.value = ref.name;
-        option.textContent = ref.name.replace(/^refs\/(heads|tags|remotes)\//, "");
-        refSelect.append(option);
+        const item = this.#menuItem(shortRefName(ref.name), {
+          checked: this.#selectedRefs.includes(ref.name),
+          onSelect: () => this.#toggleRef(ref.name)
+        });
+        checks.set(ref.name, item.querySelector<HTMLElement>(".menu-check")!);
+        scroll.append(item);
+        count += 1;
       }
     }
-    refSelect.value = this.#selectedRef ?? "";
-    this.#updateSearchStatus();
+    if (count > 0) {
+      menu.append(Object.assign(document.createElement("div"), { className: "menu-separator" }), scroll);
+    }
+    // Ticking a branch keeps the menu open, so the checks are refreshed in
+    // place rather than by rebuilding (which would lose the scroll position).
+    this.#menuSync = () => {
+      const active = selected();
+      allItem.querySelector<HTMLElement>(".menu-check")!.textContent = active.size === 0 ? "✓" : "";
+      for (const [name, check] of checks) check.textContent = active.has(name) ? "✓" : "";
+    };
+    const anchorBox = anchor.getBoundingClientRect();
+    const host = this.getBoundingClientRect();
+    this.#positionMenu(menu, anchorBox.left - host.left, anchorBox.bottom - host.top + 2);
+  }
+
+  #toggleRef(name: string): void {
+    const next = new Set(this.#selectedRefs);
+    if (next.has(name)) next.delete(name);
+    else next.add(name);
+    this.#applyRefs([...next]);
+  }
+
+  #applyRefs(refs: readonly string[]): void {
+    this.#selectedRefs = refs;
+    this.#updateToolbar();
+    this.#menuSync?.();
+    if (this.#provider) void this.#load(false);
+  }
+
+  #openCommitMenu(commit: GitGraphCommit, clientX: number, clientY: number): void {
+    const proceed = this.dispatchEvent(
+      new CustomEvent("gitgraph-context-menu", {
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+        detail: { commit, clientX, clientY }
+      })
+    );
+    if (!proceed) return;
+    const menu = this.#openMenu("commit");
+    const subject = commit.message.split("\n", 1)[0] ?? "";
+    menu.append(
+      this.#menuItem("Copy Commit Hash", {
+        enabled: commit.kind !== "working-tree",
+        onSelect: () => {
+          this.#closeMenu();
+          void this.#copy(commit.oid);
+        }
+      }),
+      this.#menuItem("Copy Commit Subject", {
+        enabled: subject.length > 0,
+        onSelect: () => {
+          this.#closeMenu();
+          void this.#copy(subject);
+        }
+      }),
+      this.#menuItem("Compare with Selected Commit", {
+        enabled: Boolean(
+          this.#selectedOid && this.#selectedOid !== commit.oid && this.#provider?.compare
+        ),
+        onSelect: () => {
+          const base = this.#selectedOid;
+          this.#closeMenu();
+          if (base) void this.compareCommits(base, commit.oid);
+        }
+      })
+    );
+    if (commit.url) {
+      const url = commit.url;
+      menu.append(
+        this.#menuItem("Open in Remote ↗", {
+          onSelect: () => {
+            this.#closeMenu();
+            window.open(url, "_blank", "noopener,noreferrer");
+          }
+        })
+      );
+    }
+    const host = this.getBoundingClientRect();
+    this.#positionMenu(menu, clientX - host.left, clientY - host.top);
+  }
+
+  async #copy(value: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      // Embedded hosts can deny clipboard permission; fall back to a detached
+      // selection copy.
+      const area = document.createElement("textarea");
+      area.value = value;
+      area.setAttribute("aria-hidden", "true");
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.append(area);
+      area.select();
+      document.execCommand("copy");
+      area.remove();
+    }
+  }
+
+  #avatarElement(commit: GitGraphCommit): HTMLElement {
+    const email = commit.author?.email?.trim().toLowerCase() ?? "";
+    const avatar = document.createElement("span");
+    avatar.className = "avatar";
+    avatar.setAttribute("aria-hidden", "true");
+    const initial = document.createElement("span");
+    initial.textContent = (commit.author?.name ?? "?").trim().slice(0, 1).toUpperCase() || "?";
+    avatar.append(initial);
+    if (email) avatar.style.setProperty("--avatar-color", avatarColour(email));
+    const url = commit.author?.avatarUrl ?? (email ? AVATAR_URLS.get(email) : undefined);
+    if (url) {
+      const image = document.createElement("img");
+      image.src = url;
+      image.alt = "";
+      image.loading = "lazy";
+      image.decoding = "async";
+      // Authors without a hosted avatar keep the initial underneath.
+      image.addEventListener("error", () => image.remove());
+      avatar.append(image);
+    }
+    return avatar;
+  }
+
+  async #resolveAvatars(): Promise<void> {
+    if (!this.avatars) return;
+    const pending = new Set<string>();
+    for (const commit of this.#page.commits) {
+      const email = commit.author?.email?.trim().toLowerCase();
+      if (email && !commit.author?.avatarUrl && !AVATAR_URLS.has(email) && !AVATAR_PENDING.has(email)) {
+        pending.add(email);
+      }
+    }
+    if (pending.size === 0) return;
+    for (const email of pending) AVATAR_PENDING.add(email);
+    await Promise.all(
+      [...pending].map(async (email) => {
+        const url = await gravatarUrl(email).catch(() => undefined);
+        if (url) AVATAR_URLS.set(email, url);
+        AVATAR_PENDING.delete(email);
+      })
+    );
+    this.#renderWindow();
   }
 
   #updateMatches(resetCursor: boolean): void {
@@ -682,6 +1121,12 @@ export class WebGitGraphElement extends HTMLElementBase {
     const windowElement = this.#root.querySelector<HTMLElement>(".window");
     if (!scroller || !spacer || !windowElement) return;
 
+    if (this.#page.commits.length === 0) {
+      // The placeholder branches below replace the whole window, so any panel
+      // node belonged to the page that has just gone away.
+      this.#detailsElement = undefined;
+      this.#detailsSignature = undefined;
+    }
     if (this.#loading && this.#page.commits.length === 0) {
       spacer.style.height = "100%";
       windowElement.innerHTML = `<div class="loading"><slot name="loading">Reading the commit DAG…</slot></div>`;
@@ -720,7 +1165,14 @@ export class WebGitGraphElement extends HTMLElementBase {
         this.#overscan
     );
     windowElement.style.transform = "";
-    windowElement.replaceChildren();
+    // The details panel keeps its DOM node and stays attached across renders.
+    // Recreating it — or even detaching and re-inserting it — cancels and
+    // restarts its open animation, which is what made every re-render (a
+    // scroll tick, a right-click) look like the panel flickering.
+    const reusedDetails = this.#detailsElement;
+    for (const child of [...windowElement.children]) {
+      if (child !== reusedDetails) child.remove();
+    }
 
     const graphTop = this.#rowTop(start, selectedIndex);
     const graphHeight = Math.max(this.#rowHeight, this.#rowTop(end, selectedIndex) - graphTop);
@@ -744,6 +1196,8 @@ export class WebGitGraphElement extends HTMLElementBase {
     const nodesByOid = new Map(this.#layout.nodes.map((node) => [node.oid, node]));
     const matchSet = new Set(this.#matches);
     const currentMatch = this.#matchCursor >= 0 ? this.#matches[this.#matchCursor] : -1;
+    const showAvatars = this.avatars;
+    const dateFormat = this.dateFormat;
     for (let index = start; index < end; index += 1) {
       const commit = this.#page.commits[index]!;
       const row = document.createElement("div");
@@ -766,13 +1220,21 @@ export class WebGitGraphElement extends HTMLElementBase {
         <div class="author" role="gridcell"></div>
         <div class="oid" role="gridcell"></div>`;
       row.querySelector<HTMLElement>(".message")!.textContent = commit.message.split("\n", 1)[0] ?? "";
-      row.querySelector<HTMLElement>(".author")!.textContent = commit.author?.name ?? "—";
-      row.querySelector<HTMLElement>(".date")!.textContent = formatDate(commit.committedAt ?? commit.authoredAt);
+      const authorCell = row.querySelector<HTMLElement>(".author")!;
+      if (showAvatars && commit.kind !== "working-tree") authorCell.append(this.#avatarElement(commit));
+      const authorName = document.createElement("span");
+      authorName.className = "author-name";
+      authorName.textContent = commit.author?.name ?? "—";
+      authorCell.append(authorName);
+      row.querySelector<HTMLElement>(".date")!.textContent = formatDate(
+        this.#commitDate(commit),
+        dateFormat
+      );
       row.querySelector<HTMLElement>(".oid")!.textContent = shortOid(commit.oid);
       const refs = row.querySelector<HTMLElement>(".refs")!;
       const seenLabels = new Set<string>();
       for (const ref of refsByTarget.get(commit.oid) ?? []) {
-        const label = ref.name.replace(/^refs\/(heads|tags|remotes)\//, "");
+        const label = shortRefName(ref.name);
         const dedupeKey = ref.kind === "current" || ref.kind === "head" ? `branch:${label}` : `${ref.kind}:${label}`;
         if (seenLabels.has(dedupeKey)) continue;
         seenLabels.add(dedupeKey);
@@ -782,11 +1244,17 @@ export class WebGitGraphElement extends HTMLElementBase {
           ref.kind === "tag" ? "◇" : ref.kind === "stash" ? "≋" : ref.kind === "remote" ? "↗" : "⑂";
         badge.textContent = `${prefix} ${label}`;
         const node = nodesByOid.get(commit.oid);
-        if (node) badge.style.setProperty("--ref-color", PALETTE[node.colour % PALETTE.length]!);
+        if (node && LANE_COLOURED_REFS.has(ref.kind)) {
+          badge.style.setProperty("--ref-color", PALETTE[node.colour % PALETTE.length]!);
+        }
         refs.append(badge);
         if (seenLabels.size >= 4) break;
       }
       row.addEventListener("click", (event) => {
+        // A right-click arrives as a Ctrl-click on Apple platforms; the context
+        // menu owns that gesture, so selection must not react to it or the
+        // details panel opens and closes underneath the menu.
+        if (event.button !== 0 || (IS_APPLE && event.ctrlKey)) return;
         if ((event.metaKey || event.ctrlKey) && this.#selectedOid && this.#selectedOid !== commit.oid) {
           void this.compareCommits(this.#selectedOid, commit.oid);
         } else if (commit.oid === this.#selectedOid && !this.#compareOid) {
@@ -794,6 +1262,10 @@ export class WebGitGraphElement extends HTMLElementBase {
         } else {
           this.selectCommit(commit.oid);
         }
+      });
+      row.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        this.#openCommitMenu(commit, event.clientX, event.clientY);
       });
       row.addEventListener("dblclick", () => {
         if (commit.url) window.open(commit.url, "_blank", "noopener,noreferrer");
@@ -809,12 +1281,17 @@ export class WebGitGraphElement extends HTMLElementBase {
     }
 
     if (selectedIndex >= 0) {
-      const details = document.createElement("aside");
+      const details = reusedDetails ?? document.createElement("aside");
       details.className = "inline-details";
       details.setAttribute("aria-label", this.#compareOid ? "Commit comparison" : "Commit details");
       details.style.top = `${detailsTop}px`;
       details.style.height = `${detailsHeight}px`;
-      windowElement.append(details);
+      if (details.parentNode !== windowElement) windowElement.append(details);
+      this.#detailsElement = details;
+    } else {
+      reusedDetails?.remove();
+      this.#detailsElement = undefined;
+      this.#detailsSignature = undefined;
     }
 
     if (this.#page.hasMore && end === this.#page.commits.length) {
@@ -943,6 +1420,22 @@ export class WebGitGraphElement extends HTMLElementBase {
   #renderDetailsPanel(waiting = false): void {
     const details = this.#root.querySelector<HTMLElement>(".inline-details");
     if (!details || !this.#selectedOid) return;
+    // Scrolling re-renders the window on every tick; rebuilding identical panel
+    // contents there would reset the summary's own scroll position and the
+    // file tree under the pointer.
+    const signature = JSON.stringify([
+      this.#selectedOid,
+      this.#compareOid,
+      waiting,
+      this.#details?.commit.oid,
+      this.#details?.changes.length,
+      Boolean(this.#comparison),
+      this.#fileDiff?.path,
+      this.#fileDiff?.patch?.length,
+      [...this.#collapsedDirs].sort()
+    ]);
+    if (signature === this.#detailsSignature && details.firstChild) return;
+    this.#detailsSignature = signature;
     details.innerHTML = `
       <button class="details-close" type="button" aria-label="Close details">×</button>
       <div class="details-summary"></div>
@@ -969,7 +1462,8 @@ export class WebGitGraphElement extends HTMLElementBase {
       ["Commit", commit.kind === "working-tree" ? "uncommitted changes" : commit.oid, true],
       ["Parents", commit.parents.map(shortOid).join(", ") || "root commit", true],
       ["Author", `${commit.author?.name ?? "Unknown"}${commit.author?.email ? ` <${commit.author.email}>` : ""}`],
-      ["Date", formatDate(commit.committedAt ?? commit.authoredAt)]
+      // The panel always shows the absolute timestamp, whatever the column shows.
+      ["Date", formatDate(this.#commitDate(commit))]
     ];
     for (const [label, value, mono] of fields) {
       const dt = document.createElement("dt");
@@ -986,14 +1480,24 @@ export class WebGitGraphElement extends HTMLElementBase {
     summary.append(body);
     const actions = document.createElement("div");
     actions.className = "actions";
-    actions.innerHTML = `<button class="action primary copy" type="button">Copy SHA</button><button class="action compare-action" type="button">Compare with…</button>`;
-    actions.querySelector(".copy")?.addEventListener("click", () => void navigator.clipboard.writeText(commit.oid));
-    const compareAction = actions.querySelector<HTMLButtonElement>(".compare-action");
-    compareAction?.addEventListener("click", () => {
-      compareAction.textContent = "Ctrl/Cmd-click another commit";
-      compareAction.disabled = true;
-      this.#root.querySelector<HTMLElement>(".scroller")?.focus();
-    });
+    actions.innerHTML = `<button class="action primary copy" type="button">Copy SHA</button>`;
+    actions.querySelector(".copy")?.addEventListener("click", () => void this.#copy(commit.oid));
+    // Only offered when the provider can actually diff two revisions, so the
+    // affordance never leads to a silent no-op.
+    if (this.#provider?.compare) {
+      const compareAction = document.createElement("button");
+      compareAction.className = "action compare-action";
+      compareAction.type = "button";
+      compareAction.textContent = "Compare with…";
+      compareAction.addEventListener("click", () => {
+        compareAction.textContent = IS_APPLE
+          ? "Cmd-click another commit"
+          : "Ctrl-click another commit";
+        compareAction.disabled = true;
+        this.#root.querySelector<HTMLElement>(".scroller")?.focus();
+      });
+      actions.append(compareAction);
+    }
     if (commit.url) {
       const open = document.createElement("button");
       open.className = "action";
@@ -1172,6 +1676,12 @@ export class WebGitGraphElement extends HTMLElementBase {
     }
   }
 
+  #commitDate(commit: GitGraphCommit): string | undefined {
+    return this.dateType === "authored"
+      ? commit.authoredAt ?? commit.committedAt
+      : commit.committedAt ?? commit.authoredAt;
+  }
+
   #revisionLabel(revision: GitGraphRevision): string {
     if (revision.kind === "working-tree") return "working tree";
     return shortOid(revision.oid);
@@ -1184,6 +1694,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     this.#comparison = undefined;
     this.#fileDiff = undefined;
     this.#collapsedDirs.clear();
+    this.#detailsSignature = undefined;
     this.#renderWindow();
     this.#renderDetailsPanel();
   }
@@ -1224,7 +1735,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     try {
       const page = await this.#provider.getHistory({
         repositoryId: this.#page.repositoryId,
-        ref: this.#selectedRef,
+        refs: this.#selectedRefs.length ? this.#selectedRefs : undefined,
         cursor: append ? this.#page.cursor : undefined,
         limit: 200,
         includeWorkingTree: true,

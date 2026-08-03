@@ -46,7 +46,8 @@ export class HttpGitGraphProvider implements GitGraphProvider {
     const repositoryId = request.repositoryId ?? this.repositoryId;
     if (!repositoryId) throw new TypeError("repositoryId is required");
     const query = new URLSearchParams();
-    if (request.ref) query.set("ref", request.ref);
+    if (request.refs?.length) for (const ref of request.refs) query.append("ref", ref);
+    else if (request.ref) query.set("ref", request.ref);
     if (request.cursor) query.set("cursor", request.cursor);
     if (request.limit) query.set("limit", String(request.limit));
     if (request.includeWorkingTree !== undefined) {
