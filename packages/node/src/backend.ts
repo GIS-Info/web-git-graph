@@ -307,7 +307,9 @@ export class LocalGitBackend implements GitGraphBackend {
     const repository = await this.#resolveRepository(repositoryId, signal);
     const limit = Math.min(this.#maxPageSize, Math.max(1, request.limit ?? this.#maxPageSize));
     const refs = await this.#getRefs(repository, signal);
-    const stashes = repository.bare ? [] : await this.#getStashes(repository, signal);
+    const stashes = repository.bare
+      ? { refs: [], auxiliaryOids: new Set<string>() }
+      : await this.#getStashes(repository, signal);
     let snapshot: GitGraphSnapshot;
     let offset = 0;
 
@@ -336,7 +338,9 @@ export class LocalGitBackend implements GitGraphBackend {
         }
         tips = [matching.target];
       } else {
-        tips = [...new Set([...refs.map((ref) => ref.target), ...stashes.map((stash) => stash.target)])];
+        tips = [
+          ...new Set([...refs.map((ref) => ref.target), ...stashes.refs.map((stash) => stash.target)])
+        ];
       }
       snapshot = {
         id: randomBytes(18).toString("base64url"),
@@ -372,16 +376,20 @@ export class LocalGitBackend implements GitGraphBackend {
     const selected = lines.slice(0, limit);
     const oids = selected.map((line) => line.split(" ", 1)[0]!).filter(Boolean);
     const rawCommits = await this.#readCommits(repository.path, oids, signal);
-    const stashByOid = new Map(stashes.map((stash) => [stash.target, stash.name]));
-    let commits: GitGraphCommit[] = rawCommits.map((commit) => ({
-      oid: commit.oid,
-      parents: commit.parents,
-      message: commit.message,
-      kind: stashByOid.has(commit.oid) ? "stash" : "commit",
-      ...(commit.author ? { author: commit.author } : {}),
-      ...(commit.authoredAt ? { authoredAt: commit.authoredAt } : {}),
-      ...(commit.committedAt ? { committedAt: commit.committedAt } : {})
-    }));
+    const stashByOid = new Map(stashes.refs.map((stash) => [stash.target, stash.name]));
+    let commits: GitGraphCommit[] = rawCommits
+      .filter((commit) => !stashes.auxiliaryOids.has(commit.oid))
+      .map((commit) => ({
+        oid: commit.oid,
+        // A stash grafts onto its base commit only; the remaining parents are
+        // the internal index/untracked commits that this page filters out.
+        parents: stashByOid.has(commit.oid) ? commit.parents.slice(0, 1) : commit.parents,
+        message: commit.message,
+        kind: stashByOid.has(commit.oid) ? "stash" : "commit",
+        ...(commit.author ? { author: commit.author } : {}),
+        ...(commit.authoredAt ? { authoredAt: commit.authoredAt } : {}),
+        ...(commit.committedAt ? { committedAt: commit.committedAt } : {})
+      }));
 
     if (!request.cursor && request.includeWorkingTree !== false && !repository.bare && repository.head) {
       const status = await this.#getWorkingTreeChanges(repository, signal);
@@ -404,7 +412,7 @@ export class LocalGitBackend implements GitGraphBackend {
     const nextOffset = offset + selected.length;
     return {
       commits,
-      refs: [...refs, ...stashes],
+      refs: [...refs, ...stashes.refs],
       ...(repository.head ? { head: repository.head } : {}),
       ...(hasMore ? { cursor: encodeCursor(snapshot.id, nextOffset) } : {}),
       hasMore,
@@ -446,7 +454,8 @@ export class LocalGitBackend implements GitGraphBackend {
     }
     const commit: GitGraphCommit = {
       oid: raw.oid,
-      parents: raw.parents,
+      // Stash parents beyond the first are internal index/untracked commits.
+      parents: revision.kind === "stash" ? raw.parents.slice(0, 1) : raw.parents,
       message: raw.message,
       kind: revision.kind,
       ...(raw.author ? { author: raw.author } : {}),
@@ -644,23 +653,33 @@ export class LocalGitBackend implements GitGraphBackend {
     return refs;
   }
 
-  async #getStashes(repository: ResolvedRepository, signal?: AbortSignal): Promise<GitGraphRef[]> {
+  async #getStashes(
+    repository: ResolvedRepository,
+    signal?: AbortSignal
+  ): Promise<{ refs: GitGraphRef[]; auxiliaryOids: Set<string> }> {
     const result = await this.#run(
       repository.path,
-      ["stash", "list", "--format=%H%x09%gd%x09%gs"],
+      ["stash", "list", "--format=%H%x09%P%x09%gd%x09%gs"],
       { signal, allowFailure: true }
     );
-    return result.stdout
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => {
-        const [target, selector, subject] = line.split("\t");
-        return {
-          name: selector || subject || "stash",
-          target: target!,
-          kind: "stash" as const
-        };
+    const refs: GitGraphRef[] = [];
+    // A stash commit's 2nd (index) and 3rd (untracked files) parents are
+    // internal bookkeeping commits. They are reachable from the stash tip, so
+    // rev-list would emit them as ordinary history rows unless excluded.
+    const auxiliaryOids = new Set<string>();
+    for (const line of result.stdout.split("\n").filter(Boolean)) {
+      const [target, parents, selector, subject] = line.split("\t");
+      if (!target) continue;
+      refs.push({
+        name: selector || subject || "stash",
+        target,
+        kind: "stash" as const
       });
+      for (const parent of (parents ?? "").split(" ").filter(Boolean).slice(1)) {
+        auxiliaryOids.add(parent);
+      }
+    }
+    return { refs, auxiliaryOids };
   }
 
   async #getWorkingTreeChanges(

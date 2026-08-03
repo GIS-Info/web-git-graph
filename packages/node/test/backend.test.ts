@@ -86,6 +86,34 @@ describe("LocalGitBackend", () => {
     expect(details.commit.additions).toBeGreaterThan(0);
   });
 
+  it("lists stashes without leaking index/untracked helper commits", async () => {
+    await writeFile(join(repository, "README.md"), "# stashed\n");
+    await git("add", "README.md");
+    await writeFile(join(repository, "loose.txt"), "loose\n");
+    await git("stash", "push", "--include-untracked", "-m", "wip");
+    try {
+      const stashOid = await git("rev-parse", "stash@{0}");
+      const page = await backend.getHistory("test", { limit: 50, includeWorkingTree: false });
+
+      const stash = page.commits.find((commit) => commit.oid === stashOid);
+      expect(stash?.kind).toBe("stash");
+      expect(stash?.parents).toHaveLength(1);
+      expect(page.refs.some((ref) => ref.kind === "stash")).toBe(true);
+      // The stash's index/untracked parents are reachable from the stash tip
+      // but must never surface as ordinary history rows.
+      expect(
+        page.commits.filter((commit) => /^(index|untracked files) on /.test(commit.message))
+      ).toEqual([]);
+
+      const details = await backend.getCommitDetails("test", { kind: "stash", oid: stashOid });
+      expect(details.commit.parents).toHaveLength(1);
+    } finally {
+      await git("stash", "pop");
+      await git("restore", "--staged", "README.md");
+      await git("checkout", "--", "README.md");
+    }
+  });
+
   it("rejects paths outside allowedRoots and revision expressions", async () => {
     const denied = new LocalGitBackend({
       repositories: { denied: tmpdir() },
