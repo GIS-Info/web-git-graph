@@ -44,6 +44,7 @@
     }
   },
   "activationEvents": [
+    "onStartupFinished",
     "onWebviewPanel:webGitGraph.history"
   ],
   "main": "./dist/extension/extension.cjs",
@@ -64,6 +65,16 @@
           "when": "scmProvider == git"
         }
       ]
+    },
+    "configuration": {
+      "title": "Web Git Graph",
+      "properties": {
+        "webGitGraph.showStatusBarItem": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a status bar item that opens the Web Git Graph when the workspace contains a Git repository."
+        }
+      }
     }
   },
   "scripts": {

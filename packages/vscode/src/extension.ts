@@ -1,4 +1,6 @@
 import { randomBytes } from "node:crypto";
+import { access } from "node:fs/promises";
+import { join } from "node:path";
 import * as vscode from "vscode";
 import { GitGraphProtocolError, type GitGraphRevision } from "@web-git-graph/protocol";
 import { LocalGitBackend } from "@web-git-graph/node";
@@ -20,6 +22,33 @@ let session: HostSession | undefined;
 let currentPanel: vscode.WebviewPanel | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
+  const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+  statusBarItem.text = "$(git-branch) Web Git Graph";
+  statusBarItem.tooltip = "View the Git history graph";
+  statusBarItem.command = OPEN_COMMAND;
+  const updateStatusBarItem = async () => {
+    const enabled = vscode.workspace
+      .getConfiguration("webGitGraph")
+      .get<boolean>("showStatusBarItem", true);
+    if (enabled && (await detectRepositories()).size > 0) statusBarItem.show();
+    else statusBarItem.hide();
+  };
+  // Detects repositories created or removed after startup (e.g. git init).
+  const headWatcher = vscode.workspace.createFileSystemWatcher("**/.git/HEAD");
+  context.subscriptions.push(
+    statusBarItem,
+    headWatcher,
+    headWatcher.onDidCreate(() => void updateStatusBarItem()),
+    headWatcher.onDidDelete(() => void updateStatusBarItem()),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => void updateStatusBarItem()),
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("webGitGraph.showStatusBarItem")) {
+        void updateStatusBarItem();
+      }
+    })
+  );
+  void updateStatusBarItem();
+
   context.subscriptions.push(
     vscode.workspace.registerTextDocumentContentProvider(DIFF_SCHEME, diffContentProvider),
     vscode.commands.registerCommand(OPEN_COMMAND, async () => {
@@ -29,9 +58,9 @@ export function activate(context: vscode.ExtensionContext): void {
         );
         return;
       }
-      if ((vscode.workspace.workspaceFolders ?? []).length === 0) {
+      if ((await detectRepositories()).size === 0) {
         await vscode.window.showInformationMessage(
-          "Open a folder or workspace before launching Web Git Graph."
+          "Open a folder or workspace containing a Git repository before launching Web Git Graph."
         );
         return;
       }
@@ -61,20 +90,53 @@ export function activate(context: vscode.ExtensionContext): void {
 
 export function deactivate(): void {}
 
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function looksLikeRepository(root: string): Promise<boolean> {
+  if (await pathExists(join(root, ".git"))) return true;
+  // A bare repository opened directly as a workspace folder.
+  return (await pathExists(join(root, "HEAD"))) && (await pathExists(join(root, "objects")));
+}
+
 /**
- * The backend is derived from the current workspace folders and rebuilt
- * whenever they change, so repository ids stay aligned with folder indexes.
+ * Repository ids stay aligned with workspace folder indexes; folders without
+ * a Git repository are skipped so one plain folder in a multi-root workspace
+ * cannot break the repository listing.
  */
-function currentSession(): HostSession {
+async function detectRepositories(): Promise<Map<string, vscode.WorkspaceFolder>> {
   const folders = vscode.workspace.workspaceFolders ?? [];
-  const key = folders.map((folder) => folder.uri.toString()).join("\n");
+  const entries = await Promise.all(
+    folders.map(async (folder, index) =>
+      (await looksLikeRepository(folder.uri.fsPath))
+        ? ([[`workspace-${index}`, folder]] as const)
+        : []
+    )
+  );
+  return new Map(entries.flat());
+}
+
+/**
+ * The backend is derived from the detected repositories and rebuilt whenever
+ * workspace folders change or a repository appears or disappears on disk.
+ */
+async function currentSession(): Promise<HostSession> {
+  const folders = vscode.workspace.workspaceFolders ?? [];
+  const repositories = await detectRepositories();
+  const key = [...folders.map((folder) => folder.uri.toString()), ...repositories.keys()].join("\n");
   if (session?.key !== key) {
     session = {
       key,
       folders,
       backend: new LocalGitBackend({
         repositories: Object.fromEntries(
-          folders.map((folder, index) => [`workspace-${index}`, folder.uri.fsPath])
+          [...repositories].map(([id, folder]) => [id, folder.uri.fsPath])
         ),
         allowedRoots: folders.map((folder) => folder.uri.fsPath)
       })
@@ -182,7 +244,7 @@ async function executeRpc(request: GitGraphRpcRequest): Promise<unknown> {
       "Trust this workspace before Web Git Graph can execute read-only Git commands."
     );
   }
-  const { backend, folders } = currentSession();
+  const { backend, folders } = await currentSession();
   switch (request.method) {
     case "repositories":
       return backend.listRepositories();
@@ -303,7 +365,7 @@ const diffContentProvider: vscode.TextDocumentContentProvider = {
       return "";
     }
     if (query.empty || !query.repositoryId || !query.oid || !query.path) return "";
-    const file = await currentSession().backend.getFileContent(
+    const file = await (await currentSession()).backend.getFileContent(
       query.repositoryId,
       { kind: "commit", oid: query.oid },
       query.path
@@ -335,15 +397,16 @@ function webviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string 
   <title>Web Git Graph</title>
   <style>
     html, body { height: 100%; margin: 0; background: var(--vscode-editor-background); }
-    body { display: grid; grid-template-rows: 36px minmax(0, 1fr); color: var(--vscode-editor-foreground); }
-    header { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-bottom: 1px solid var(--vscode-panel-border); }
+    body { display: grid; grid-template-rows: auto minmax(0, 1fr); color: var(--vscode-editor-foreground); }
+    header { display: flex; align-items: center; gap: 8px; height: 36px; box-sizing: border-box; padding: 4px 8px; border-bottom: 1px solid var(--vscode-panel-border); }
+    header[hidden] { display: none; }
     label { color: var(--vscode-descriptionForeground); font-size: 12px; }
     select { min-width: 220px; color: var(--vscode-dropdown-foreground); background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); }
     web-git-graph { min-height: 0; border: 0; }
   </style>
 </head>
 <body>
-  <header>
+  <header hidden>
     <label for="repository">Repository</label>
     <select id="repository" aria-label="Repository"></select>
   </header>

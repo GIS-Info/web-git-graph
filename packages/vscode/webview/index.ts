@@ -185,6 +185,9 @@ async function loadRepositories(): Promise<void> {
     option.textContent = repository.name;
     repositorySelect.append(option);
   }
+  // The picker only carries information when there is a choice to make.
+  const header = document.querySelector<HTMLElement>("header");
+  if (header) header.hidden = repositories.length < 2;
   const target =
     repositories.find((repository) => repository.id === preferred) ?? repositories[0];
   if (target) selectRepository(target.id, state.selectedOid);

@@ -21,8 +21,15 @@ details, stashes, an uncommitted-changes row and native revision diffs.
 
 ## Usage
 
-Run **Web Git Graph: Open Graph** from the command palette, or use the graph
-button in the Source Control view title bar.
+Open the graph from any of:
+
+- the **Web Git Graph** status bar item (shown when the workspace contains a
+  Git repository; disable with `webGitGraph.showStatusBarItem`),
+- the graph button in the Source Control view title bar,
+- the **Web Git Graph: Open Graph** command in the command palette.
+
+In multi-root workspaces with several repositories, a repository picker
+appears above the graph; with a single repository it stays hidden.
 
 ## Read-only by design
 

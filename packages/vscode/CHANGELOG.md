@@ -4,6 +4,8 @@
 
 - Initial release: read-only commit graph with deterministic lanes, commit
   details, search, stashes and a working-tree pseudo commit.
+- Entry points: status bar item, Source Control view title button and the
+  command palette.
 - Native VS Code diff editor for per-file changes at any revision.
 - Automatic refresh on `HEAD`, ref and index changes.
 - Webview persistence across window reloads.
