@@ -149,6 +149,79 @@ test("opens a commit context menu without disturbing the selection", async ({ pa
   await expect(graph.locator(".row.selected")).toHaveCount(1);
 });
 
+test("right-clicking a row changes nothing but the menu", async ({ page }) => {
+  await gotoDemo(page);
+  const graph = page.locator("web-git-graph");
+  const row = graph.locator(".row").nth(3);
+  await row.hover();
+
+  const before = await graph.evaluate((element) => {
+    const root = element.shadowRoot!;
+    const target = root.querySelectorAll<HTMLElement>(".row")[3]!;
+    const style = getComputedStyle(target);
+    return {
+      background: style.backgroundColor,
+      focused: root.activeElement === target,
+      rows: root.querySelectorAll(".row").length
+    };
+  });
+
+  await row.click({ button: "right" });
+  await expect(graph.locator(".menu[data-menu='commit']")).toBeVisible();
+  const during = await graph.evaluate((element) => {
+    const root = element.shadowRoot!;
+    const target = root.querySelectorAll<HTMLElement>(".row")[3]!;
+    const style = getComputedStyle(target);
+    return {
+      background: style.backgroundColor,
+      focused: root.activeElement === target,
+      rows: root.querySelectorAll(".row").length,
+      marked: target.classList.contains("context-active")
+    };
+  });
+
+  // The row keeps its highlight even though the menu covers the pointer, the
+  // row count is untouched, and right-clicking never steals focus.
+  expect(during.background).toBe(before.background);
+  expect(during.rows).toBe(before.rows);
+  expect(during.marked).toBe(true);
+  expect(before.focused).toBe(false);
+  expect(during.focused).toBe(false);
+
+  await page.keyboard.press("Escape");
+  await expect(graph.locator(".menu")).toHaveCount(0);
+  await expect(graph.locator(".row.context-active")).toHaveCount(0);
+});
+
+test("refreshing keeps the scroll position and the open commit", async ({ page }) => {
+  await gotoDemo(page, BACKEND_DEMO);
+  const graph = page.locator("web-git-graph");
+  await expect(graph.locator(".repository-name")).toHaveText("web-git-graph");
+
+  await graph.locator(".row").nth(4).click();
+  await expect(graph.locator(".inline-details")).toBeVisible();
+  const selected = await graph.locator(".row.selected .oid").textContent();
+  const scrollTop = await graph.evaluate((element) => {
+    const scroller = element.shadowRoot!.querySelector<HTMLElement>(".scroller")!;
+    scroller.scrollTop = 120;
+    return scroller.scrollTop;
+  });
+  expect(scrollTop).toBe(120);
+
+  // The host refreshes on every Git change, so a refresh must not throw the
+  // reader back to the top or close what they were reading.
+  await graph.locator(".refresh").click();
+  await expect(graph.locator(".inline-details")).toBeVisible();
+  await expect(graph.locator(".row.selected .oid")).toHaveText(selected!);
+  await expect
+    .poll(() =>
+      graph.evaluate(
+        (element) => element.shadowRoot!.querySelector<HTMLElement>(".scroller")!.scrollTop
+      )
+    )
+    .toBe(120);
+});
+
 test("does not replay the details animation when the window re-renders", async ({ page }) => {
   await gotoDemo(page, BACKEND_DEMO);
   const graph = page.locator("web-git-graph");

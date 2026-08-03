@@ -137,7 +137,7 @@ select, .icon-button {
   border-bottom: 1px solid color-mix(in srgb, var(--wgg-line) 30%, transparent);
   position: absolute; left: 0; right: 0; cursor: default; font-size: 12px;
 }
-.row:hover, .row.preview { background: var(--wgg-hover); }
+.row:hover, .row.preview, .row.context-active { background: var(--wgg-hover); }
 .row.match { background: color-mix(in srgb, var(--wgg-warning) 16%, transparent); }
 .row.match-current { box-shadow: inset 0 0 0 1px var(--wgg-warning); }
 .row.selected { background: var(--wgg-selected); }
@@ -418,6 +418,7 @@ export class WebGitGraphElement extends HTMLElementBase {
   #menu?: HTMLElement;
   #menuClose?: () => void;
   #menuSync?: () => void;
+  #contextOid?: string;
   #selectedOid?: string;
   #compareOid?: string;
   #details?: GitGraphCommitDetails;
@@ -549,6 +550,11 @@ export class WebGitGraphElement extends HTMLElementBase {
     this.#applyRefs([...value]);
   }
 
+  /**
+   * Re-reads the current page in place. The scroll position and the open commit
+   * are kept, so a manual refresh — or a host that refreshes on every Git
+   * change — does not throw the reader back to the top of the history.
+   */
   refresh(): void {
     const event = new CustomEvent("gitgraph-refresh", {
       bubbles: true,
@@ -556,7 +562,7 @@ export class WebGitGraphElement extends HTMLElementBase {
       cancelable: true,
       detail: { repositoryId: this.#page.repositoryId }
     });
-    if (this.dispatchEvent(event) && this.#provider) void this.#load(false);
+    if (this.dispatchEvent(event) && this.#provider) void this.#load(false, true);
   }
 
   setData(page: GitGraphPage): void {
@@ -845,8 +851,18 @@ export class WebGitGraphElement extends HTMLElementBase {
     this.#menu = undefined;
     this.#menuClose = undefined;
     this.#menuSync = undefined;
+    this.#contextOid = undefined;
     close?.();
+    this.#markContextRow();
     this.#root.querySelector<HTMLElement>(".ref-select")?.setAttribute("aria-expanded", "false");
+  }
+
+  /** Toggles the marker class in place; re-rendering the window would undo the
+   * very thing this exists to avoid. */
+  #markContextRow(): void {
+    for (const row of this.#root.querySelectorAll<HTMLElement>(".row")) {
+      row.classList.toggle("context-active", row.dataset.oid === this.#contextOid);
+    }
   }
 
   /** Clamps the menu inside the host so it never spills out of the component. */
@@ -958,6 +974,8 @@ export class WebGitGraphElement extends HTMLElementBase {
     );
     if (!proceed) return;
     const menu = this.#openMenu("commit");
+    this.#contextOid = commit.oid;
+    this.#markContextRow();
     const subject = commit.message.split("\n", 1)[0] ?? "";
     menu.append(
       this.#menuItem("Copy Commit Hash", {
@@ -1206,6 +1224,9 @@ export class WebGitGraphElement extends HTMLElementBase {
       row.classList.toggle("working-tree", commit.kind === "working-tree");
       row.classList.toggle("match", matchSet.has(index));
       row.classList.toggle("match-current", index === currentMatch);
+      // The open menu covers the pointer, so the row would otherwise lose its
+      // hover highlight for exactly as long as its own menu is showing.
+      row.classList.toggle("context-active", commit.oid === this.#contextOid);
       if (commit.oid === this.#selectedOid) row.classList.add("selected");
       if (commit.oid === this.#compareOid) row.classList.add("compare");
       row.dataset.oid = commit.oid;
@@ -1263,8 +1284,16 @@ export class WebGitGraphElement extends HTMLElementBase {
           this.selectCommit(commit.oid);
         }
       });
+      row.addEventListener("mousedown", (event) => {
+        // Right-clicking must not move focus: the outline appearing and then
+        // moving to a menu item is one more thing blinking on screen.
+        if (event.button === 2) event.preventDefault();
+      });
       row.addEventListener("contextmenu", (event) => {
         event.preventDefault();
+        // Embedding hosts (VS Code among them) show their own menu for any
+        // contextmenu event that reaches the document.
+        event.stopPropagation();
         this.#openCommitMenu(commit, event.clientX, event.clientY);
       });
       row.addEventListener("dblclick", () => {
@@ -1724,11 +1753,19 @@ export class WebGitGraphElement extends HTMLElementBase {
     if (target !== scroller.scrollTop) scroller.scrollTo({ top: target, behavior: "smooth" });
   }
 
-  async #load(append: boolean): Promise<void> {
+  async #load(append: boolean, preserveView = false): Promise<void> {
     if (!this.#provider || (append && !this.#page.hasMore)) return;
     this.#abort?.abort();
     this.#abort = new AbortController();
-    this.#loading = !append;
+    const view = preserveView
+      ? {
+          scrollTop: this.#root.querySelector<HTMLElement>(".scroller")?.scrollTop ?? 0,
+          selectedOid: this.#selectedOid
+        }
+      : undefined;
+    // A preserving reload keeps the current rows on screen while it runs, so
+    // the graph does not blank out and reappear.
+    this.#loading = !append && !preserveView;
     this.#loadingMore = append;
     this.#error = undefined;
     this.#renderWindow();
@@ -1742,13 +1779,37 @@ export class WebGitGraphElement extends HTMLElementBase {
         signal: this.#abort.signal
       });
       if (append) this.appendPage(page);
-      else this.setData(page);
+      else {
+        this.setData(page);
+        if (view) this.#restoreView(view);
+      }
     } catch (error) {
       if (this.#abort.signal.aborted) return;
       this.#emitError(error);
     } finally {
       this.#loading = false;
       this.#loadingMore = false;
+      this.#renderWindow();
+    }
+  }
+
+  /**
+   * Reapplies the pre-reload view. The selection is restored without the reveal
+   * animation and the scroll offset is written back synchronously, so a refresh
+   * is invisible when the history has not changed.
+   */
+  #restoreView(view: { scrollTop: number; selectedOid?: string }): void {
+    const commit = view.selectedOid
+      ? this.#page.commits.find((item) => item.oid === view.selectedOid)
+      : undefined;
+    if (commit) {
+      this.#selectedOid = commit.oid;
+      void this.#loadDetails(commit);
+    }
+    this.#renderWindow();
+    const scroller = this.#root.querySelector<HTMLElement>(".scroller");
+    if (scroller && view.scrollTop !== scroller.scrollTop) {
+      scroller.scrollTop = view.scrollTop;
       this.#renderWindow();
     }
   }
