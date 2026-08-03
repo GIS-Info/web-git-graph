@@ -1,0 +1,23 @@
+packages/web/package.json
+  s_22ebc5ce28f78e::t_4338b9c249f53d 63-64
+packages/node/package.json
+  s_22ebc5ce28f78e::t_4338b9c249f53d 52-53
+packages/protocol/package.json
+  s_22ebc5ce28f78e::t_4338b9c249f53d 42-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "130db7ed7c8109e8b810b3a8222a9545063e4dc8",
+  "prompts": {},
+  "sessions": {
+    "s_22ebc5ce28f78e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "095033a0-2478-423d-93f3-f17d0859397a",
+        "model": "claude-fable-5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
