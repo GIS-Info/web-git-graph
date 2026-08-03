@@ -9,6 +9,9 @@ import { LocalGitBackend } from "../src/backend";
 const exec = promisify(execFile);
 let repository = "";
 let backend: LocalGitBackend;
+/** `backend` caps pages at 2 commits to exercise pagination; assertions about
+ * which commits a walk reaches need the whole history in one page. */
+let wide: LocalGitBackend;
 
 async function git(...args: string[]): Promise<string> {
   return (await exec("git", ["-C", repository, ...args], { encoding: "utf8" })).stdout.trim();
@@ -36,6 +39,10 @@ describe("LocalGitBackend", () => {
       repositories: { test: repository },
       allowedRoots: [repository],
       maxPageSize: 2
+    });
+    wide = new LocalGitBackend({
+      repositories: { test: repository },
+      allowedRoots: [repository]
     });
   });
 
@@ -93,7 +100,7 @@ describe("LocalGitBackend", () => {
     await git("stash", "push", "--include-untracked", "-m", "wip");
     try {
       const stashOid = await git("rev-parse", "stash@{0}");
-      const page = await backend.getHistory("test", { limit: 50, includeWorkingTree: false });
+      const page = await wide.getHistory("test", { limit: 50, includeWorkingTree: false });
 
       const stash = page.commits.find((commit) => commit.oid === stashOid);
       expect(stash?.kind).toBe("stash");
@@ -112,6 +119,30 @@ describe("LocalGitBackend", () => {
       await git("restore", "--staged", "README.md");
       await git("checkout", "--", "README.md");
     }
+  });
+
+  it("walks the union of several refs and rejects unknown ones", async () => {
+    const featureTip = await git("rev-parse", "feature");
+    const single = await wide.getHistory("test", {
+      limit: 50,
+      ref: "feature",
+      includeWorkingTree: false
+    });
+    expect(single.commits.some((commit) => commit.oid === featureTip)).toBe(true);
+    // "main change" is only reachable from main, never from feature.
+    expect(single.commits.some((commit) => commit.message === "main change")).toBe(false);
+
+    const union = await wide.getHistory("test", {
+      limit: 50,
+      refs: ["feature", "refs/heads/main"],
+      includeWorkingTree: false
+    });
+    expect(union.commits.some((commit) => commit.oid === featureTip)).toBe(true);
+    expect(union.commits.some((commit) => commit.message === "main change")).toBe(true);
+
+    await expect(
+      backend.getHistory("test", { refs: ["feature", "no-such-branch"] })
+    ).rejects.toMatchObject({ code: "revision_not_found" });
   });
 
   it("reads file contents at a specific revision", async () => {

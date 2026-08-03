@@ -114,9 +114,12 @@ export function createGitGraphFetchHandler(options: GitGraphHandlerOptions) {
       const action = segments[repositoryIndex + 2];
       if (request.method === "GET" && action === "history") {
         const limit = url.searchParams.get("limit");
+        // A repeated `ref` parameter selects the union of several tips; a
+        // single one keeps the original single-ref shape.
+        const refs = url.searchParams.getAll("ref").filter(Boolean);
         return json(
           await options.backend.getHistory(repositoryId, {
-            ...(url.searchParams.get("ref") ? { ref: url.searchParams.get("ref")! } : {}),
+            ...(refs.length > 1 ? { refs } : refs.length === 1 ? { ref: refs[0]! } : {}),
             ...(url.searchParams.get("cursor") ? { cursor: url.searchParams.get("cursor")! } : {}),
             ...(limit ? { limit: Number(limit) } : {}),
             includeWorkingTree: url.searchParams.get("includeWorkingTree") !== "false"

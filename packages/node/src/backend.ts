@@ -341,16 +341,21 @@ export class LocalGitBackend implements GitGraphBackend {
       offset = decoded.offset;
     } else {
       let tips: string[];
-      if (request.ref) {
-        const matching = refs.find(
-          (ref) =>
-            ref.name === request.ref ||
-            ref.name.replace(/^refs\/(heads|tags|remotes)\//, "") === request.ref
-        );
-        if (!matching) {
-          throw new GitGraphProtocolError("revision_not_found", `Unknown ref: ${request.ref}`);
+      const requested = request.refs?.length ? request.refs : request.ref ? [request.ref] : [];
+      if (requested.length) {
+        const targets = new Set<string>();
+        for (const name of requested) {
+          const matching = refs.find(
+            (ref) =>
+              ref.name === name ||
+              ref.name.replace(/^refs\/(heads|tags|remotes)\//, "") === name
+          );
+          if (!matching) {
+            throw new GitGraphProtocolError("revision_not_found", `Unknown ref: ${name}`);
+          }
+          targets.add(matching.target);
         }
-        tips = [matching.target];
+        tips = [...targets];
       } else {
         tips = [
           ...new Set([...refs.map((ref) => ref.target), ...stashes.refs.map((stash) => stash.target)])
