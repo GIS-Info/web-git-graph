@@ -1,6 +1,6 @@
 {
   "name": "@web-git-graph/node",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "Read-only local Git backend, HTTP handlers and CLI for Web Git Graph.",
   "type": "module",
   "license": "MIT",

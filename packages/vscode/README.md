@@ -14,10 +14,16 @@ details, stashes, an uncommitted-changes row and native revision diffs.
   the file contents at the commit's parent and at the commit itself.
 - **Search** — highlight-and-jump matching on message, author and hash without
   collapsing the graph topology.
+- **Branch filtering** — tick any number of branches, remotes and tags; the
+  graph is walked from the union of those tips.
+- **Context menu** — right-click a commit to copy its hash or subject, or to
+  compare it with the selected commit.
 - **Stashes and working tree** — stashes appear as grafted tips; uncommitted
   changes appear as a pseudo commit.
-- **Auto refresh** — the graph reloads when `HEAD`, refs or the index change.
-- **Multi-root workspaces** — pick a repository per workspace folder.
+- **Auto refresh** — the graph reloads when `HEAD`, refs or the index change,
+  and a refresh button is always available.
+- **Repository discovery** — every workspace folder plus repositories nested
+  below it are listed.
 
 ## Usage
 
@@ -28,8 +34,19 @@ Open the graph from any of:
 - the graph button in the Source Control view title bar,
 - the **Web Git Graph: Open Graph** command in the command palette.
 
-In multi-root workspaces with several repositories, a repository picker
+When the workspace contains more than one repository, a repository picker
 appears above the graph; with a single repository it stays hidden.
+
+## Settings
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `webGitGraph.maxDepthOfRepoSearch` | `2` | Directory levels searched below each workspace folder |
+| `webGitGraph.columns` | `date, author, commit` | Columns shown beside the graph |
+| `webGitGraph.date.format` | `datetime` | `datetime`, `date` or `relative` |
+| `webGitGraph.date.type` | `committed` | Show the committed or authored date |
+| `webGitGraph.fetchAvatars` | `false` | Load author avatars from Gravatar |
+| `webGitGraph.showStatusBarItem` | `true` | Show the status bar entry point |
 
 ## Read-only by design
 

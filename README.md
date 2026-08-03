@@ -130,10 +130,17 @@ The component emits:
 gitgraph-commit-select   gitgraph-commit-open
 gitgraph-compare         gitgraph-file-open
 gitgraph-load-more       gitgraph-error
+gitgraph-refresh         gitgraph-context-menu
 ```
 
-Use the `theme` and `density` properties plus `--wgg-*` CSS custom properties
-to adapt the component to a host application.
+`gitgraph-refresh` and `gitgraph-context-menu` are cancelable: prevent them to
+refresh the data or show a context menu the host's own way.
+
+Presentation is driven by attributes — `theme`, `density`, `columns`
+(`date,author,commit`), `date-format` (`datetime`, `date`, `relative`),
+`date-type` (`committed`, `authored`) and `avatars` — plus the `--wgg-*` CSS
+custom properties. Avatars are off by default because resolving them discloses
+author email hashes to Gravatar.
 
 ### Development
 
@@ -258,9 +265,16 @@ CLI 默认监听 `127.0.0.1:4174`。浏览器只会接触不透明的 `repositor
 gitgraph-commit-select   gitgraph-commit-open
 gitgraph-compare         gitgraph-file-open
 gitgraph-load-more       gitgraph-error
+gitgraph-refresh         gitgraph-context-menu
 ```
 
-可以通过 `theme`、`density` 属性以及 `--wgg-*` CSS 自定义属性适配宿主应用。
+`gitgraph-refresh` 与 `gitgraph-context-menu` 可以被取消，宿主可借此改用自己的
+刷新逻辑或右键菜单。
+
+外观由属性驱动：`theme`、`density`、`columns`（`date,author,commit`）、
+`date-format`（`datetime`、`date`、`relative`）、`date-type`（`committed`、
+`authored`）与 `avatars`，再配合 `--wgg-*` CSS 自定义属性。头像默认关闭，
+因为解析头像会把作者邮箱的哈希发送给 Gravatar。
 
 ### 本地开发
 

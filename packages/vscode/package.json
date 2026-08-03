@@ -1,7 +1,7 @@
 {
   "name": "web-git-graph",
   "displayName": "Web Git Graph",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Read-only Git history graph with deterministic lanes, commit details and revision diffs.",
   "type": "module",
   "license": "MIT",
@@ -73,6 +73,64 @@
           "type": "boolean",
           "default": true,
           "description": "Show a status bar item that opens the Web Git Graph when the workspace contains a Git repository."
+        },
+        "webGitGraph.maxDepthOfRepoSearch": {
+          "type": "integer",
+          "default": 2,
+          "minimum": 0,
+          "maximum": 6,
+          "markdownDescription": "How many directory levels below each workspace folder are searched for Git repositories. `0` only checks the folder itself. `node_modules`, build output and hidden directories are always skipped."
+        },
+        "webGitGraph.columns": {
+          "type": "array",
+          "default": [
+            "date",
+            "author",
+            "commit"
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "date",
+              "author",
+              "commit"
+            ]
+          },
+          "uniqueItems": true,
+          "description": "Columns shown to the right of the graph. The graph and description columns are always shown."
+        },
+        "webGitGraph.date.format": {
+          "type": "string",
+          "default": "datetime",
+          "enum": [
+            "datetime",
+            "date",
+            "relative"
+          ],
+          "enumDescriptions": [
+            "Date and time, for example 2026/08/03 11:04",
+            "Date only, for example 2026/08/03",
+            "Relative to now, for example 3 days ago"
+          ],
+          "description": "How commit dates are rendered in the date column."
+        },
+        "webGitGraph.date.type": {
+          "type": "string",
+          "default": "committed",
+          "enum": [
+            "committed",
+            "authored"
+          ],
+          "enumDescriptions": [
+            "The date the commit was committed",
+            "The date the commit was authored"
+          ],
+          "description": "Which of a commit's two dates is shown."
+        },
+        "webGitGraph.fetchAvatars": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Show author avatars from Gravatar. Off by default: enabling it sends a hash of each author's email address to `gravatar.com`."
         }
       }
     }
