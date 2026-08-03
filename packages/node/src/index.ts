@@ -10,6 +10,8 @@ export {
 export {
   createGitGraphFetchHandler,
   createGitGraphNodeHandler,
+  normalizeBasePath,
+  stripBasePath,
   type GitGraphHandlerOptions,
   type GitGraphRequestContext
 } from "./handler";

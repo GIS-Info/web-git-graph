@@ -25,6 +25,13 @@ export interface GitGraphHandlerOptions {
   ) => boolean | unknown | Promise<boolean | unknown>;
   onRequest?: (context: GitGraphRequestContext) => void | Promise<void>;
   onError?: (error: unknown, context: GitGraphRequestContext) => void | Promise<void>;
+  /**
+   * Optional URL prefix the handler is mounted at, e.g. `/api/projects/42/git-graph`.
+   * When set, the prefix is stripped from the request path before routing, so a
+   * subpath mount does not need host-side rewriting. Root mount (no prefix) is
+   * unchanged. Requests outside the prefix are rejected.
+   */
+  basePath?: string;
 }
 
 function isRevision(value: unknown): value is GitGraphRevision {
@@ -83,10 +90,37 @@ function errorResponse(error: unknown): Response {
   return json(resolved.toJSON() satisfies GitGraphProtocolErrorBody, statusForError(resolved));
 }
 
+/** Normalises a configured prefix to a `/foo/bar` shape, or `""` for the root. */
+export function normalizeBasePath(basePath: string | undefined): string {
+  if (!basePath || basePath === "/") return "";
+  const trimmed = `/${basePath.replace(/^\/+|\/+$/g, "")}`;
+  return trimmed === "/" ? "" : trimmed;
+}
+
+/**
+ * Strips the configured mount prefix from a request path. Returns `false` when
+ * the request is outside the prefix, so the handler can reject it outright.
+ */
+export function stripBasePath(basePath: string, pathname: string): string | false {
+  if (!basePath) return pathname;
+  if (pathname === basePath) return "/";
+  if (pathname.startsWith(`${basePath}/`)) return pathname.slice(basePath.length);
+  return false;
+}
+
 export function createGitGraphFetchHandler(options: GitGraphHandlerOptions) {
+  const basePath = normalizeBasePath(options.basePath);
   return async function handle(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    const segments = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+    const pathname = stripBasePath(basePath, url.pathname);
+    if (pathname === false) {
+      return json(
+        new GitGraphHttpError("bad_request", "The request is outside the mounted base path.", 404)
+          .toJSON() satisfies GitGraphProtocolErrorBody,
+        404
+      );
+    }
+    const segments = pathname.split("/").filter(Boolean).map(decodeURIComponent);
     const repositoryIndex = segments.indexOf("repositories");
     const repositoryId = repositoryIndex >= 0 ? segments[repositoryIndex + 1] : undefined;
     const context: GitGraphRequestContext = { request, ...(repositoryId ? { repositoryId } : {}) };

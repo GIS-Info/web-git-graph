@@ -65,3 +65,53 @@ describe("protocol handlers", () => {
     });
   });
 });
+
+describe("basePath mounting", () => {
+  const handler = createGitGraphFetchHandler({
+    backend,
+    basePath: "/api/projects/42/git-graph"
+  });
+
+  it("routes requests under the configured base path", async () => {
+    const capabilities = await handler(
+      new Request("http://localhost/api/projects/42/git-graph/v1/capabilities")
+    );
+    expect(capabilities.status).toBe(200);
+    expect(await capabilities.json()).toMatchObject({ protocolVersion: "1" });
+  });
+
+  it("keeps repository ids after stripping the prefix", async () => {
+    const response = await handler(
+      new Request("http://localhost/api/projects/42/git-graph/v1/repositories/repo/history")
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ repositoryId: "repo" });
+  });
+
+  it("rejects requests outside the base path", async () => {
+    const response = await handler(new Request("http://localhost/v1/capabilities"));
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({
+      error: { code: "bad_request", retryable: false }
+    });
+  });
+
+  it("rejects requests that merely share the base path prefix", async () => {
+    const response = await handler(
+      new Request("http://localhost/api/projects/42/git-graph-other/v1/capabilities")
+    );
+    expect(response.status).toBe(404);
+  });
+
+  it("accepts the bare base path only for actual protocol routes", async () => {
+    const bare = await handler(new Request("http://localhost/api/projects/42/git-graph"));
+    // Strips to "/" then hits the unknown-route 404.
+    expect(bare.status).toBe(404);
+  });
+
+  it("accepts root mounting unchanged when no base path is set", async () => {
+    const root = createGitGraphFetchHandler({ backend });
+    const response = await root(new Request("http://localhost/v1/capabilities"));
+    expect(response.status).toBe(200);
+  });
+});

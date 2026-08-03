@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.3
+
+- `addEventListener` / `removeEventListener` on `WebGitGraphElement` are now
+  typed against `WebGitGraphElementEventMap`, so `event.detail` type-checks from
+  the event name without host-side casts; the matching `ongitgraph-*` handler
+  properties are typed too.
+- The `@web-git-graph/web/jsx` entry augments `React.JSX.IntrinsicElements`, so
+  React + TypeScript hosts can render `<web-git-graph>` without a local ambient
+  declaration. It is a type-only entry: no React dependency ships in the package.
+- The Node HTTP handler accepts a `basePath` option (and the CLI a
+  `--base-path` flag), so a backend mounted under a subpath serves the v1
+  protocol without host-side URL rewriting. Root mounting is unchanged.
+
 ## 1.0.2
 
 - Remote branch chips (`origin/*`) are no longer drawn with a dashed border.

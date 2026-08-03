@@ -1,4 +1,5 @@
 import { layoutGitGraph, type GitGraphLayout } from "./layout";
+import type { WebGitGraphElementEventMap } from "./events";
 import type {
   GitGraphChange,
   GitGraphCommit,
@@ -448,6 +449,45 @@ export class WebGitGraphElement extends HTMLElementBase {
   #detailsHeight = 240;
   #showRemoteRefs = true;
   #root: ShadowRoot;
+
+  /** Type-safe listeners: `event.detail` is inferred from the event name. */
+  addEventListener<K extends keyof WebGitGraphElementEventMap>(
+    type: K,
+    listener: (this: WebGitGraphElement, event: WebGitGraphElementEventMap[K]) => void,
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void {
+    super.addEventListener(type, listener, options);
+  }
+
+  removeEventListener<K extends keyof WebGitGraphElementEventMap>(
+    type: K,
+    listener: (this: WebGitGraphElement, event: WebGitGraphElementEventMap[K]) => void,
+    options?: boolean | EventListenerOptions
+  ): void;
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | EventListenerOptions
+  ): void;
+  removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void {
+    super.removeEventListener(type, listener, options);
+  }
+
+  /** Assign these on* properties instead of calling addEventListener. */
+  ongitgraphcommitsselect: ((this: WebGitGraphElement, event: WebGitGraphElementEventMap["gitgraph-commit-select"]) => void) | null = null;
+  ongitgraphcommitsopen: ((this: WebGitGraphElement, event: WebGitGraphElementEventMap["gitgraph-commit-open"]) => void) | null = null;
+  ongitgraphcompare: ((this: WebGitGraphElement, event: WebGitGraphElementEventMap["gitgraph-compare"]) => void) | null = null;
+  ongitgraphfileopen: ((this: WebGitGraphElement, event: WebGitGraphElementEventMap["gitgraph-file-open"]) => void) | null = null;
+  ongitgraphloadmore: ((this: WebGitGraphElement, event: WebGitGraphElementEventMap["gitgraph-load-more"]) => void) | null = null;
+  ongitgrapherror: ((this: WebGitGraphElement, event: WebGitGraphElementEventMap["gitgraph-error"]) => void) | null = null;
+  ongitgraphrefresh: ((this: WebGitGraphElement, event: WebGitGraphElementEventMap["gitgraph-refresh"]) => void) | null = null;
+  ongitgraphcontextmenu: ((this: WebGitGraphElement, event: WebGitGraphElementEventMap["gitgraph-context-menu"]) => void) | null = null;
 
   constructor() {
     super();

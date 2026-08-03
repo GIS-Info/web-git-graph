@@ -1,6 +1,6 @@
 {
   "name": "@web-git-graph/web",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Framework-free Git history graph Web Component and browser providers.",
   "type": "module",
   "license": "MIT",
@@ -30,6 +30,11 @@
       "import": "./dist/register.js",
       "require": "./dist/register.cjs"
     },
+    "./jsx": {
+      "types": "./dist/jsx.d.ts",
+      "import": "./dist/jsx.js",
+      "require": "./dist/jsx.cjs"
+    },
     "./providers/github": {
       "types": "./dist/providers/github.d.ts",
       "import": "./dist/providers/github.js",
@@ -46,8 +51,8 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsup",
-    "lint": "tsc -p tsconfig.json --noEmit",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.types.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.types.json",
     "test": "vitest run",
     "pack:check": "pnpm build && npm pack --dry-run --cache .npm-cache"
   },
@@ -55,6 +60,8 @@
     "@web-git-graph/protocol": "workspace:*"
   },
   "devDependencies": {
+    "@types/react": "^19.2.18",
+    "react": "^19.2.8",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"

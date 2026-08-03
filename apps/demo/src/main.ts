@@ -241,7 +241,7 @@ form.addEventListener("submit", (event) => {
   graph.addEventListener(
     "gitgraph-error",
     (error) => {
-      const message = (error as CustomEvent<{ error: Error }>).detail.error.message;
+      const message = error.detail.error instanceof Error ? error.detail.error.message : String(error.detail.error);
       statusState = { kind: "error", message };
       renderStatus();
     },
