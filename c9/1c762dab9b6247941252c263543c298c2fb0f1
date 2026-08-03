@@ -1,0 +1,26 @@
+packages/node/test/backend.test.ts
+  s_22ebc5ce28f78e::t_cfbb9e0e71bba5 89-116
+packages/node/src/backend.ts
+  s_22ebc5ce28f78e::t_c965a666e55c8a 656-659,662,665-676,678-682
+  s_22ebc5ce28f78e::t_eb99bc0353fa1b 379-392
+  s_22ebc5ce28f78e::t_5145372703b779 341-343
+  s_22ebc5ce28f78e::t_fa988a39235f27 415
+  s_22ebc5ce28f78e::t_68bae0b3ea08a2 457-458
+  s_22ebc5ce28f78e::t_78ebdf759f8a50 310-312
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "c91c762dab9b6247941252c263543c298c2fb0f1",
+  "prompts": {},
+  "sessions": {
+    "s_22ebc5ce28f78e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "095033a0-2478-423d-93f3-f17d0859397a",
+        "model": "claude-fable-5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
