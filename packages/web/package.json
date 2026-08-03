@@ -60,6 +60,7 @@
     "vitest": "^3.2.4"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }

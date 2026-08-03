@@ -39,7 +39,8 @@
     "pack:check": "pnpm build && npm pack --dry-run --cache .npm-cache"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
     "tsup": "^8.5.0",
