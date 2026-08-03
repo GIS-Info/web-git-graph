@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.1
+
+- Right-clicking a commit no longer makes the row blink: the row keeps its
+  highlight while its own menu covers the pointer, and the gesture no longer
+  moves focus.
+- Repository discovery is cached, so opening a commit or a diff no longer walks
+  the workspace tree first.
+- A background refresh (VS Code's Git integration touches the index often) now
+  reloads the graph in place, keeping the scroll position and the open commit
+  instead of jumping back to the top.
+
 ## 1.0.0
 
 - Repositories nested below a workspace folder are found too, up to
