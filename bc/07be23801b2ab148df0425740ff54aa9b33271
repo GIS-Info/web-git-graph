@@ -1,0 +1,36 @@
+packages/vscode/package.json
+  s_22ebc5ce28f78e::t_2fbe32c0275282 76-133
+  s_22ebc5ce28f78e::t_7fec93406b9ead 4
+packages/vscode/CHANGELOG.md
+  s_22ebc5ce28f78e::t_2bec9b90f6e2b4 3-19
+package.json
+  s_22ebc5ce28f78e::t_7fec93406b9ead 4
+packages/vscode/README.md
+  s_22ebc5ce28f78e::t_9fb43c4a09e034 37,40-49
+  s_22ebc5ce28f78e::t_cd6f2d3b38ad85 17-20,23-26
+  s_22ebc5ce28f78e::t_b98fe97f734402 50
+packages/web/package.json
+  s_22ebc5ce28f78e::t_7fec93406b9ead 3
+packages/node/package.json
+  s_22ebc5ce28f78e::t_7fec93406b9ead 3
+README.md
+  s_22ebc5ce28f78e::t_b7993edf036f3f 133,136-143,268,271-277
+packages/protocol/package.json
+  s_22ebc5ce28f78e::t_7fec93406b9ead 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "bc07be23801b2ab148df0425740ff54aa9b33271",
+  "prompts": {},
+  "sessions": {
+    "s_22ebc5ce28f78e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "095033a0-2478-423d-93f3-f17d0859397a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
