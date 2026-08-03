@@ -1,0 +1,28 @@
+packages/node/src/handler.ts
+  s_22ebc5ce28f78e::t_e38e4b8c4c2544 117-119,122
+packages/node/test/backend.test.ts
+  s_22ebc5ce28f78e::t_3a680030c6b4d8 12-14
+  s_22ebc5ce28f78e::t_7657f16ff83067 124-125,127-134,136-145
+  s_22ebc5ce28f78e::t_3b63a19ce0468b 103
+  s_22ebc5ce28f78e::t_b927e2609f3879 126,135
+  s_22ebc5ce28f78e::t_dce45f7c8af959 43-46
+  s_22ebc5ce28f78e::t_cd02051760dabd 146-147
+packages/node/src/backend.ts
+  s_22ebc5ce28f78e::t_93520b7274b18e 344-356,358
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "3160474ef7705f6bfb0be19363c68b55f220e54f",
+  "prompts": {},
+  "sessions": {
+    "s_22ebc5ce28f78e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "095033a0-2478-423d-93f3-f17d0859397a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
