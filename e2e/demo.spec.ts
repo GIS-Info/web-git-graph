@@ -107,6 +107,16 @@ test("emphasises the checked-out branch with a solid chip", async ({ page }) => 
   // inside a lane-coloured border.
   expect(await alpha(".ref.current")).toBe(1);
   expect(await alpha(".ref.head:not(.current)")).toBeLessThan(1);
+
+  // Remote branches recede by colour: a grey outline with no fill at all.
+  await gotoDemo(page, BACKEND_DEMO);
+  await expect(graph.locator(".repository-name")).toHaveText("web-git-graph");
+  const remote = graph.locator(".ref.remote").first();
+  await expect(remote).toBeVisible();
+  expect(await alpha(".ref.remote")).toBe(0);
+  expect(
+    await remote.evaluate((element) => getComputedStyle(element).borderTopStyle)
+  ).toBe("solid");
 });
 
 test("shows author avatars only when enabled", async ({ page }) => {

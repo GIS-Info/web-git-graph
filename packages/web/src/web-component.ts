@@ -13,8 +13,11 @@ import type { GitGraphProvider } from "./provider";
 
 const ELEMENT_NAME = "web-git-graph";
 const PALETTE = ["#e3008c", "#007acc", "#00c853", "#ff8c00", "#b180d7", "#00b7c3", "#dcdcaa"];
-/** Kinds whose chip takes the lane colour; tags and stashes carry their own. */
-const LANE_COLOURED_REFS = new Set(["current", "head", "remote"]);
+/**
+ * Kinds whose chip takes the lane colour. Tags and stashes carry their own, and
+ * remote branches are deliberately grey.
+ */
+const LANE_COLOURED_REFS = new Set(["current", "head"]);
 /**
  * Ctrl-click is the system context-menu gesture on Apple platforms, so it must
  * not double as the comparison modifier there.
@@ -159,7 +162,16 @@ select, .icon-button {
 /* Only the checked-out branch is solid, so "you are here" reads at a glance
    while every other branch is emphasised by its lane-coloured border. */
 .ref.current { background: var(--ref-color, var(--wgg-accent)); color: #fff; }
-.ref.remote { border-style: dashed; font-weight: 400; }
+/* Remote branches recede by colour rather than by line style: a grey outline
+   with no tint, so they read as "not here" without a busy dashed border. */
+.ref.remote {
+  /* --wgg-faint rather than --wgg-line: the border has to stay legible against
+     both the dark and the light background. */
+  border-color: var(--wgg-faint);
+  background: transparent;
+  color: var(--wgg-muted);
+  font-weight: 400;
+}
 .ref.tag, .ref.stash { background: var(--ref-color); color: #fff; }
 .ref.tag { --ref-color: #0e639c; }
 .ref.stash { --ref-color: #9b2f86; }
