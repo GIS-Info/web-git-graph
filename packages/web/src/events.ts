@@ -1,7 +1,8 @@
 import type {
   GitGraphChange,
   GitGraphCommit,
-  GitGraphComparison
+  GitGraphComparison,
+  GitGraphRevision
 } from "@web-git-graph/protocol";
 
 export interface WebGitGraphElementEventMap {
@@ -10,6 +11,8 @@ export interface WebGitGraphElementEventMap {
   "gitgraph-compare": CustomEvent<GitGraphComparison>;
   "gitgraph-file-open": CustomEvent<{
     change: GitGraphChange;
+    base?: GitGraphRevision;
+    head?: GitGraphRevision;
     comparison?: GitGraphComparison;
   }>;
   "gitgraph-load-more": CustomEvent<{ cursor?: string }>;

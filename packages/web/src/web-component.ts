@@ -1138,7 +1138,7 @@ export class WebGitGraphElement extends HTMLElementBase {
             bubbles: true,
             composed: true,
             cancelable: true,
-            detail: { change, comparison: diff?.comparison }
+            detail: { change, base: diff?.base, head: diff?.head, comparison: diff?.comparison }
           })
         );
         if (!proceed || !diff || !this.#provider?.getFileDiff) return;
