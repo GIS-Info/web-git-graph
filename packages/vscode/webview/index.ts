@@ -51,6 +51,7 @@ window.addEventListener("message", (event: MessageEvent<GitGraphRpcServerMessage
   const message = event.data;
   if (!("id" in message)) {
     if (message.method === "refresh") void refresh();
+    else if (message.method === "configChanged") void applyConfig();
     return;
   }
   const request = pending.get(message.id);
@@ -168,6 +169,14 @@ function applyTheme(): void {
   graph.theme = document.body.classList.contains("vscode-light") ? "light" : "dark";
 }
 
+async function applyConfig(): Promise<void> {
+  const config = await rpc("config", {});
+  graph.dateFormat = config.dateFormat;
+  graph.dateType = config.dateType;
+  graph.columns = config.columns;
+  graph.avatars = config.avatars;
+}
+
 function selectRepository(repositoryId: string, selectedOid?: string): void {
   repositorySelect.value = repositoryId;
   graph.provider = new VsCodeGitGraphProvider(repositoryId);
@@ -238,4 +247,5 @@ new MutationObserver(applyTheme).observe(document.body, {
   attributes: true,
   attributeFilter: ["class"]
 });
+await applyConfig();
 await refresh();

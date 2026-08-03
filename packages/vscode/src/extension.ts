@@ -1,20 +1,28 @@
 import { randomBytes } from "node:crypto";
-import { access } from "node:fs/promises";
+import { access, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import * as vscode from "vscode";
 import { GitGraphProtocolError, type GitGraphRevision } from "@web-git-graph/protocol";
 import { LocalGitBackend } from "@web-git-graph/node";
 import { isSafeRelativePath } from "./paths";
-import type { GitGraphRpcRequest, GitGraphRpcResponse } from "./rpc";
+import type { GitGraphRpcRequest, GitGraphRpcResponse, GitGraphViewConfig } from "./rpc";
 
 const VIEW_TYPE = "webGitGraph.history";
 const OPEN_COMMAND = "webGitGraph.open";
 const DIFF_SCHEME = "web-git-graph";
 const REFRESH_NOTIFICATION = { method: "refresh" } as const;
+const CONFIG_NOTIFICATION = { method: "configChanged" } as const;
+
+interface DetectedRepository {
+  id: string;
+  root: vscode.Uri;
+  /** Shown in the repository picker; the folder name plus its relative path. */
+  name: string;
+}
 
 interface HostSession {
   key: string;
-  folders: readonly vscode.WorkspaceFolder[];
+  repositories: Map<string, DetectedRepository>;
   backend: LocalGitBackend;
 }
 
@@ -105,21 +113,78 @@ async function looksLikeRepository(root: string): Promise<boolean> {
   return (await pathExists(join(root, "HEAD"))) && (await pathExists(join(root, "objects")));
 }
 
+/** Directories that never contain a repository worth graphing, but do contain
+ * enough entries to make an unbounded scan expensive. */
+const SCAN_EXCLUDED = new Set([
+  "node_modules",
+  "bower_components",
+  "vendor",
+  "Pods",
+  "dist",
+  "out",
+  "build",
+  "target",
+  "coverage",
+  "__pycache__",
+  "venv"
+]);
+
+async function scanForRepositories(
+  folder: vscode.WorkspaceFolder,
+  prefix: string,
+  maxDepth: number,
+  found: Map<string, DetectedRepository>
+): Promise<void> {
+  const walk = async (relative: string, depth: number): Promise<void> => {
+    const segments = relative ? relative.split("/") : [];
+    const absolute = relative ? join(folder.uri.fsPath, ...segments) : folder.uri.fsPath;
+    if (await looksLikeRepository(absolute)) {
+      const id = relative ? `${prefix}/${relative}` : prefix;
+      found.set(id, {
+        id,
+        root: vscode.Uri.joinPath(folder.uri, ...segments),
+        name: relative ? `${folder.name}/${relative}` : folder.name
+      });
+      // Nested repositories inside a repository (submodules, vendored clones)
+      // are left to Git itself rather than listed as siblings.
+      return;
+    }
+    if (depth >= maxDepth) return;
+    const entries = await readdir(absolute, { withFileTypes: true }).catch(() => []);
+    await Promise.all(
+      entries
+        .filter(
+          (entry) =>
+            entry.isDirectory() && !entry.name.startsWith(".") && !SCAN_EXCLUDED.has(entry.name)
+        )
+        .map((entry) => walk(relative ? `${relative}/${entry.name}` : entry.name, depth + 1))
+    );
+  };
+  await walk("", 0);
+}
+
 /**
- * Repository ids stay aligned with workspace folder indexes; folders without
- * a Git repository are skipped so one plain folder in a multi-root workspace
- * cannot break the repository listing.
+ * Ids stay tied to a workspace folder index plus the repository's path inside
+ * it, so they survive a rescan and never carry an absolute path across the
+ * webview seam. Folders without a repository are skipped, so one plain folder
+ * in a multi-root workspace cannot break the repository listing.
  */
-async function detectRepositories(): Promise<Map<string, vscode.WorkspaceFolder>> {
+async function detectRepositories(): Promise<Map<string, DetectedRepository>> {
   const folders = vscode.workspace.workspaceFolders ?? [];
-  const entries = await Promise.all(
-    folders.map(async (folder, index) =>
-      (await looksLikeRepository(folder.uri.fsPath))
-        ? ([[`workspace-${index}`, folder]] as const)
-        : []
+  const maxDepth = Math.min(
+    6,
+    Math.max(
+      0,
+      vscode.workspace.getConfiguration("webGitGraph").get<number>("maxDepthOfRepoSearch", 2)
     )
   );
-  return new Map(entries.flat());
+  const found = new Map<string, DetectedRepository>();
+  await Promise.all(
+    folders.map((folder, index) =>
+      scanForRepositories(folder, `workspace-${index}`, maxDepth, found)
+    )
+  );
+  return found;
 }
 
 /**
@@ -133,16 +198,30 @@ async function currentSession(): Promise<HostSession> {
   if (session?.key !== key) {
     session = {
       key,
-      folders,
+      repositories,
       backend: new LocalGitBackend({
+        // Nested repositories stay inside their workspace folder, so the folder
+        // roots remain the whole allow-list.
         repositories: Object.fromEntries(
-          [...repositories].map(([id, folder]) => [id, folder.uri.fsPath])
+          [...repositories].map(([id, repository]) => [id, repository.root.fsPath])
         ),
         allowedRoots: folders.map((folder) => folder.uri.fsPath)
       })
     };
   }
   return session;
+}
+
+function viewConfig(): GitGraphViewConfig {
+  const settings = vscode.workspace.getConfiguration("webGitGraph");
+  const format = settings.get<string>("date.format", "datetime");
+  const columns = settings.get<readonly string[]>("columns", ["date", "author", "commit"]);
+  return {
+    dateFormat: format === "date" || format === "relative" ? format : "datetime",
+    dateType: settings.get<string>("date.type", "committed") === "authored" ? "authored" : "committed",
+    columns: [...columns].join(","),
+    avatars: settings.get<boolean>("fetchAvatars", false)
+  };
 }
 
 function attachPanel(context: vscode.ExtensionContext, panel: vscode.WebviewPanel): void {
@@ -167,8 +246,9 @@ function attachPanel(context: vscode.ExtensionContext, panel: vscode.WebviewPane
   const watchRepositories = () => {
     for (const watcher of watchers) watcher.dispose();
     watchers = (vscode.workspace.workspaceFolders ?? []).map((folder) => {
+      // `**` covers repositories nested inside the folder, not just its root.
       const watcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(folder, ".git/{HEAD,ORIG_HEAD,index,refs/**}")
+        new vscode.RelativePattern(folder, "**/.git/{HEAD,ORIG_HEAD,index,refs/**}")
       );
       watcher.onDidChange(notifyRefresh);
       watcher.onDidCreate(notifyRefresh);
@@ -182,7 +262,13 @@ function attachPanel(context: vscode.ExtensionContext, panel: vscode.WebviewPane
       watchRepositories();
       notifyRefresh();
     }),
-    vscode.workspace.onDidGrantWorkspaceTrust(() => notifyRefresh())
+    vscode.workspace.onDidGrantWorkspaceTrust(() => notifyRefresh()),
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("webGitGraph.maxDepthOfRepoSearch")) notifyRefresh();
+      else if (event.affectsConfiguration("webGitGraph")) {
+        void panel.webview.postMessage(CONFIG_NOTIFICATION);
+      }
+    })
   );
   panel.webview.onDidReceiveMessage(
     async (message) => {
@@ -244,10 +330,19 @@ async function executeRpc(request: GitGraphRpcRequest): Promise<unknown> {
       "Trust this workspace before Web Git Graph can execute read-only Git commands."
     );
   }
-  const { backend, folders } = await currentSession();
+  const { backend, repositories } = await currentSession();
   switch (request.method) {
-    case "repositories":
-      return backend.listRepositories();
+    case "config":
+      return viewConfig();
+    case "repositories": {
+      const listed = await backend.listRepositories();
+      // The backend names a repository after its own directory, which collides
+      // between nested repositories; the detected display name disambiguates.
+      return listed.map((repository) => ({
+        ...repository,
+        name: repositories.get(repository.id)?.name ?? repository.name
+      }));
+    }
     case "capabilities":
       return backend.getCapabilities();
     case "history":
@@ -272,22 +367,22 @@ async function executeRpc(request: GitGraphRpcRequest): Promise<unknown> {
         request.params.context
       );
     case "openFile": {
-      const folder = workspaceFolder(folders, request.params.repositoryId);
+      const repository = repositories.get(request.params.repositoryId);
       const path = request.params.path;
-      if (!folder || !isSafeRelativePath(path)) {
+      if (!repository || !isSafeRelativePath(path)) {
         throw new GitGraphProtocolError("bad_request", "Invalid workspace file path.");
       }
       const document = await vscode.workspace.openTextDocument(
-        vscode.Uri.joinPath(folder.uri, ...path.split("/"))
+        vscode.Uri.joinPath(repository.root, ...path.split("/"))
       );
       await vscode.window.showTextDocument(document, { preview: true });
       return { opened: true };
     }
     case "openDiff": {
       const params = request.params;
-      const folder = workspaceFolder(folders, params.repositoryId);
+      const repository = repositories.get(params.repositoryId);
       if (
-        !folder ||
+        !repository ||
         !isSafeRelativePath(params.path) ||
         (params.previousPath !== undefined && !isSafeRelativePath(params.previousPath))
       ) {
@@ -308,7 +403,7 @@ async function executeRpc(request: GitGraphRpcRequest): Promise<unknown> {
         params.kind === "delete"
           ? emptyContentUri(params.path)
           : params.head.kind === "working-tree"
-            ? vscode.Uri.joinPath(folder.uri, ...params.path.split("/"))
+            ? vscode.Uri.joinPath(repository.root, ...params.path.split("/"))
             : revisionContentUri(params.repositoryId, params.head.oid, params.path);
       const title = `${params.path} (${revisionLabel(params.base)} ⟷ ${revisionLabel(params.head)})`;
       await vscode.commands.executeCommand("vscode.diff", left, right, title, {
@@ -317,14 +412,6 @@ async function executeRpc(request: GitGraphRpcRequest): Promise<unknown> {
       return { opened: true };
     }
   }
-}
-
-function workspaceFolder(
-  folders: readonly vscode.WorkspaceFolder[],
-  repositoryId: string
-): vscode.WorkspaceFolder | undefined {
-  const match = /^workspace-(\d+)$/.exec(repositoryId);
-  return match ? folders[Number(match[1])] : undefined;
 }
 
 function revisionLabel(revision: GitGraphRevision): string {

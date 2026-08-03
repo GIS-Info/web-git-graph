@@ -12,7 +12,20 @@ import type {
 } from "@web-git-graph/protocol";
 import type { GitGraphDiffRequestBody } from "@web-git-graph/protocol/http";
 
+/** Presentation settings the extension host resolves from VS Code settings. */
+export interface GitGraphViewConfig {
+  dateFormat: "datetime" | "date" | "relative";
+  dateType: "committed" | "authored";
+  /** Comma-separated subset of `date,author,commit`. */
+  columns: string;
+  avatars: boolean;
+}
+
 export interface GitGraphRpcMethods {
+  config: {
+    params: Record<string, never>;
+    result: GitGraphViewConfig;
+  };
   repositories: {
     params: Record<string, never>;
     result: readonly GitGraphRepository[];
@@ -84,8 +97,6 @@ export type GitGraphRpcResponse =
     };
 
 /** Pushed by the extension host without a matching webview request. */
-export interface GitGraphRpcRefreshNotification {
-  method: "refresh";
-}
+export type GitGraphRpcNotification = { method: "refresh" } | { method: "configChanged" };
 
-export type GitGraphRpcServerMessage = GitGraphRpcResponse | GitGraphRpcRefreshNotification;
+export type GitGraphRpcServerMessage = GitGraphRpcResponse | GitGraphRpcNotification;
