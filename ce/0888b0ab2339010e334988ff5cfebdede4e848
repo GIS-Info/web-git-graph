@@ -1,0 +1,31 @@
+packages/web/src/web-component.ts
+  s_22ebc5ce28f78e::t_bf4cc217a0c175 1756,1760-1768
+  s_22ebc5ce28f78e::t_8fe812c90b439e 866,1796-1816
+  s_22ebc5ce28f78e::t_6a0717577f8477 140
+  s_22ebc5ce28f78e::t_5a904a703f9907 421
+  s_22ebc5ce28f78e::t_bc45f929c0c742 1782-1785
+  s_22ebc5ce28f78e::t_1daf2254521c44 977-978
+  s_22ebc5ce28f78e::t_d3774c070fd7d4 553-557,565
+  s_22ebc5ce28f78e::t_864cd113f2743e 1287-1291,1294-1296
+  s_22ebc5ce28f78e::t_c34bdb2a6eb415 1227-1229
+  s_22ebc5ce28f78e::t_0dfcc6d65f8e26 854,856,860-865
+  s_22ebc5ce28f78e::t_1c23960e01d171 867
+e2e/demo.spec.ts
+  s_22ebc5ce28f78e::t_bfad6cd6a1feaf 152-224
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "ce0888b0ab2339010e334988ff5cfebdede4e848",
+  "prompts": {},
+  "sessions": {
+    "s_22ebc5ce28f78e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "095033a0-2478-423d-93f3-f17d0859397a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
