@@ -1,0 +1,11 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build vscode extension",
+      "type": "shell",
+      "command": "pnpm --filter web-git-graph... build",
+      "problemMatcher": []
+    }
+  ]
+}
