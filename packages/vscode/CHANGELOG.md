@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+- Remote branch chips (`origin/*`) are no longer drawn with a dashed border.
+  They now recede by colour — a grey outline with no fill — while local
+  branches keep their lane-coloured, tinted chip.
+
 ## 1.0.1
 
 - Right-clicking a commit no longer makes the row blink: the row keeps its
