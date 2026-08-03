@@ -84,6 +84,12 @@ button { cursor: pointer; }
 }
 .search:focus, select:focus, button:focus-visible { outline: 1px solid var(--wgg-accent); outline-offset: -1px; }
 .tools { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.find { display: flex; align-items: center; gap: 2px; }
+.search-count {
+  min-width: 44px; padding: 0 3px; text-align: center; color: var(--wgg-muted);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.icon-button:disabled { color: var(--wgg-faint); background: transparent; cursor: default; }
 select, .icon-button {
   height: 28px; border: 1px solid var(--wgg-line); background: var(--wgg-bg);
   border-radius: 2px; padding: 3px 7px;
@@ -118,6 +124,8 @@ select, .icon-button {
   position: absolute; left: 0; right: 0; cursor: default; font-size: 12px;
 }
 .row:hover, .row.preview { background: var(--wgg-hover); }
+.row.match { background: color-mix(in srgb, var(--wgg-warning) 16%, transparent); }
+.row.match-current { box-shadow: inset 0 0 0 1px var(--wgg-warning); }
 .row.selected { background: var(--wgg-selected); }
 .row.compare { box-shadow: inset 2px 0 var(--wgg-warning); }
 .row.merge .message { color: var(--wgg-muted); }
@@ -211,7 +219,7 @@ select, .icon-button {
 }
 @media (max-width: 760px) {
   .toolbar { gap: 8px; }
-  .remote-control, .repository-name, .search { display: none; }
+  .remote-control, .repository-name, .find { display: none; }
   .branch-control { flex: 1; }
   .branch-control select { width: 100%; }
   .header, .row { grid-template-columns: var(--wgg-graph-width) minmax(220px, 1fr) var(--wgg-commit-width); }
@@ -250,6 +258,13 @@ function formatDate(value?: string): string {
 interface FileTreeNode {
   dirs: Map<string, FileTreeNode>;
   files: GitGraphChange[];
+}
+
+/** Revisions a clicked file is diffed between, for both details and compare mode. */
+interface FileDiffContext {
+  base: GitGraphRevision;
+  head: GitGraphRevision;
+  comparison?: GitGraphComparison;
 }
 
 function buildFileTree(changes: readonly GitGraphChange[]): FileTreeNode {
@@ -293,8 +308,11 @@ export class WebGitGraphElement extends HTMLElementBase {
   #provider?: GitGraphProvider;
   #page: GitGraphPage = { commits: [], refs: [], hasMore: false };
   #layout: GitGraphLayout = layoutGitGraph([]);
-  #filteredCommits: readonly GitGraphCommit[] = [];
   #search = "";
+  #matches: readonly number[] = [];
+  #matchCursor = -1;
+  #selectedRef?: string;
+  #refOptionsKey?: string;
   #selectedOid?: string;
   #compareOid?: string;
   #details?: GitGraphCommitDetails;
@@ -337,6 +355,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     // A new provider is a new data source: the previous page's repositoryId and
     // cursor must not be replayed against it, or the provider's own default
     // repository is shadowed by the stale one.
+    this.#selectedRef = undefined;
     this.#page = {
       ...this.#page,
       repositoryId: undefined,
@@ -384,6 +403,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     this.#error = undefined;
     this.#collapsedDirs.clear();
     this.#recompute();
+    this.#root.querySelector<HTMLElement>(".scroller")?.scrollTo({ top: 0 });
   }
 
   appendPage(page: GitGraphPage): void {
@@ -455,7 +475,7 @@ export class WebGitGraphElement extends HTMLElementBase {
   }
 
   focusCommit(oid: string): void {
-    const index = this.#filteredCommits.findIndex((commit) => commit.oid === oid);
+    const index = this.#page.commits.findIndex((commit) => commit.oid === oid);
     if (index < 0) return;
     const scroller = this.#root.querySelector<HTMLElement>(".scroller");
     scroller?.scrollTo({
@@ -474,21 +494,21 @@ export class WebGitGraphElement extends HTMLElementBase {
   }
 
   #recompute(): void {
-    const needle = this.#search.trim().toLocaleLowerCase();
-    this.#filteredCommits = needle
-      ? this.#page.commits.filter((commit) => {
-          const author = `${commit.author?.name ?? ""} ${commit.author?.email ?? ""}`;
-          return `${commit.oid} ${commit.message} ${author}`.toLocaleLowerCase().includes(needle);
-        })
-      : this.#page.commits;
-    this.#layout = layoutGitGraph(this.#filteredCommits);
+    this.#layout = layoutGitGraph(this.#page.commits);
+    this.#updateMatches(false);
     this.#renderShell();
+    this.#updateToolbar();
+    this.#renderWindow();
   }
 
+  /**
+   * Builds the static shell once. Rebuilding it on data changes would destroy
+   * the search input mid-typing (dropping focus after every keystroke), so all
+   * data-driven updates go through #updateToolbar and #renderWindow instead.
+   */
   #renderShell(): void {
     const shell = this.#root.querySelector<HTMLElement>(".shell");
-    if (!shell) return;
-    const repositoryName = this.#page.repositoryName ?? this.#page.repositoryId ?? "data provider";
+    if (!shell || shell.querySelector(".toolbar")) return;
     shell.innerHTML = `
       <div class="toolbar">
         <div class="branch-control">
@@ -501,7 +521,12 @@ export class WebGitGraphElement extends HTMLElementBase {
         </label>
         <span class="repository-name"></span>
         <div class="tools">
-          <input class="search" type="search" placeholder="Find commits…" aria-label="Search commits">
+          <div class="find">
+            <input class="search" type="search" placeholder="Find commits…" aria-label="Search commits">
+            <span class="search-count" hidden></span>
+            <button class="icon-button search-prev" type="button" aria-label="Previous match" disabled>↑</button>
+            <button class="icon-button search-next" type="button" aria-label="Next match" disabled>↓</button>
+          </div>
           <button class="icon-button theme-toggle" type="button" aria-label="Toggle theme">◐</button>
         </div>
       </div>
@@ -516,13 +541,30 @@ export class WebGitGraphElement extends HTMLElementBase {
         </section>
       </div>`;
 
-    shell.querySelector<HTMLElement>(".repository-name")!.textContent = repositoryName;
     const search = shell.querySelector<HTMLInputElement>(".search")!;
     search.value = this.#search;
     search.addEventListener("input", () => {
       this.#search = search.value;
-      this.#recompute();
+      this.#updateMatches(true);
+      this.#updateToolbar();
+      this.#renderWindow();
+      this.#scrollToMatch();
     });
+    search.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        this.#gotoMatch(event.shiftKey ? -1 : 1);
+      } else if (event.key === "Escape" && search.value) {
+        event.stopPropagation();
+        search.value = "";
+        this.#search = "";
+        this.#updateMatches(true);
+        this.#updateToolbar();
+        this.#renderWindow();
+      }
+    });
+    shell.querySelector(".search-prev")?.addEventListener("click", () => this.#gotoMatch(-1));
+    shell.querySelector(".search-next")?.addEventListener("click", () => this.#gotoMatch(1));
     shell.querySelector(".theme-toggle")?.addEventListener("click", () => {
       this.theme = this.theme === "light" ? "dark" : "light";
     });
@@ -533,15 +575,10 @@ export class WebGitGraphElement extends HTMLElementBase {
       this.#renderWindow();
     });
     const refSelect = shell.querySelector<HTMLSelectElement>(".ref-select")!;
-    for (const ref of this.#page.refs.filter(
-      (item) => item.kind === "head" || item.kind === "tag" || item.kind === "remote"
-    )) {
-      const option = document.createElement("option");
-      option.value = ref.name;
-      option.textContent = ref.name.replace(/^refs\/(heads|tags|remotes)\//, "");
-      refSelect.append(option);
-    }
-    refSelect.addEventListener("change", () => void this.#load(false, refSelect.value || undefined));
+    refSelect.addEventListener("change", () => {
+      this.#selectedRef = refSelect.value || undefined;
+      void this.#load(false);
+    });
     const scroller = shell.querySelector<HTMLElement>(".scroller")!;
     scroller.addEventListener("scroll", () => {
       this.#renderWindow();
@@ -555,7 +592,88 @@ export class WebGitGraphElement extends HTMLElementBase {
     });
     scroller.addEventListener("keydown", (event) => this.#onKeyDown(event));
     this.#renderWindow();
-    this.#renderDetailsPanel();
+  }
+
+  #updateToolbar(): void {
+    const shell = this.#root.querySelector<HTMLElement>(".shell");
+    if (!shell || !shell.querySelector(".toolbar")) return;
+    shell.querySelector<HTMLElement>(".repository-name")!.textContent =
+      this.#page.repositoryName ?? this.#page.repositoryId ?? "data provider";
+
+    const refSelect = shell.querySelector<HTMLSelectElement>(".ref-select")!;
+    const refs = this.#page.refs.filter(
+      (item) => item.kind === "head" || item.kind === "tag" || item.kind === "remote"
+    );
+    const optionsKey = refs.map((ref) => `${ref.kind}:${ref.name}`).join("\n");
+    if (optionsKey !== this.#refOptionsKey) {
+      this.#refOptionsKey = optionsKey;
+      refSelect.replaceChildren();
+      const all = document.createElement("option");
+      all.value = "";
+      all.textContent = "Show All";
+      refSelect.append(all);
+      for (const ref of refs) {
+        const option = document.createElement("option");
+        option.value = ref.name;
+        option.textContent = ref.name.replace(/^refs\/(heads|tags|remotes)\//, "");
+        refSelect.append(option);
+      }
+    }
+    refSelect.value = this.#selectedRef ?? "";
+    this.#updateSearchStatus();
+  }
+
+  #updateMatches(resetCursor: boolean): void {
+    const needle = this.#search.trim().toLocaleLowerCase();
+    if (!needle) {
+      this.#matches = [];
+      this.#matchCursor = -1;
+      return;
+    }
+    const matches: number[] = [];
+    this.#page.commits.forEach((commit, index) => {
+      const author = `${commit.author?.name ?? ""} ${commit.author?.email ?? ""}`;
+      if (`${commit.oid} ${commit.message} ${author}`.toLocaleLowerCase().includes(needle)) {
+        matches.push(index);
+      }
+    });
+    this.#matches = matches;
+    this.#matchCursor = matches.length === 0
+      ? -1
+      : resetCursor
+        ? 0
+        : Math.min(Math.max(this.#matchCursor, 0), matches.length - 1);
+  }
+
+  #updateSearchStatus(): void {
+    const count = this.#root.querySelector<HTMLElement>(".search-count");
+    if (!count) return;
+    const active = this.#search.trim().length > 0;
+    count.hidden = !active;
+    count.textContent = active ? `${this.#matchCursor + 1}/${this.#matches.length}` : "";
+    const disabled = this.#matches.length === 0;
+    this.#root.querySelector<HTMLButtonElement>(".search-prev")!.disabled = disabled;
+    this.#root.querySelector<HTMLButtonElement>(".search-next")!.disabled = disabled;
+  }
+
+  #gotoMatch(delta: number): void {
+    if (this.#matches.length === 0) return;
+    this.#matchCursor =
+      (this.#matchCursor + delta + this.#matches.length) % this.#matches.length;
+    this.#updateSearchStatus();
+    this.#renderWindow();
+    this.#scrollToMatch();
+  }
+
+  #scrollToMatch(): void {
+    const index = this.#matches[this.#matchCursor];
+    if (index === undefined) return;
+    const scroller = this.#root.querySelector<HTMLElement>(".scroller");
+    if (!scroller) return;
+    const top = this.#rowTop(index, this.#selectedIndex());
+    if (top < scroller.scrollTop || top + this.#rowHeight > scroller.scrollTop + scroller.clientHeight) {
+      scroller.scrollTo({ top: Math.max(0, top - scroller.clientHeight / 2) });
+    }
   }
 
   #renderWindow(): void {
@@ -576,7 +694,7 @@ export class WebGitGraphElement extends HTMLElementBase {
       if (slot) slot.textContent = this.#error;
       return;
     }
-    if (this.#filteredCommits.length === 0) {
+    if (this.#page.commits.length === 0) {
       spacer.style.height = "100%";
       windowElement.innerHTML = `<div class="empty"><slot name="empty">No commits match this view.</slot></div>`;
       return;
@@ -587,7 +705,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     const selectedIndex = this.#selectedIndex();
     const detailsHeight = selectedIndex >= 0 ? this.#detailsHeight : 0;
     const detailsTop = (selectedIndex + 1) * this.#rowHeight;
-    const contentHeight = this.#filteredCommits.length * this.#rowHeight + detailsHeight;
+    const contentHeight = this.#page.commits.length * this.#rowHeight + detailsHeight;
     spacer.style.height = `${contentHeight + (this.#page.hasMore ? 42 : 0)}px`;
     const visibleRows = Math.ceil(Math.max(scroller.clientHeight, 420) / this.#rowHeight);
     const rowAtOffset = (offset: number): number => {
@@ -597,7 +715,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     };
     const start = Math.max(0, rowAtOffset(scroller.scrollTop) - this.#overscan);
     const end = Math.min(
-      this.#filteredCommits.length,
+      this.#page.commits.length,
       Math.max(start + visibleRows, rowAtOffset(scroller.scrollTop + scroller.clientHeight) + 1) +
         this.#overscan
     );
@@ -624,12 +742,16 @@ export class WebGitGraphElement extends HTMLElementBase {
       refsByTarget.set(ref.target, existing);
     }
     const nodesByOid = new Map(this.#layout.nodes.map((node) => [node.oid, node]));
+    const matchSet = new Set(this.#matches);
+    const currentMatch = this.#matchCursor >= 0 ? this.#matches[this.#matchCursor] : -1;
     for (let index = start; index < end; index += 1) {
-      const commit = this.#filteredCommits[index]!;
+      const commit = this.#page.commits[index]!;
       const row = document.createElement("div");
       row.className = "row";
       row.classList.toggle("merge", commit.parents.length > 1);
       row.classList.toggle("working-tree", commit.kind === "working-tree");
+      row.classList.toggle("match", matchSet.has(index));
+      row.classList.toggle("match-current", index === currentMatch);
       if (commit.oid === this.#selectedOid) row.classList.add("selected");
       if (commit.oid === this.#compareOid) row.classList.add("compare");
       row.dataset.oid = commit.oid;
@@ -695,7 +817,7 @@ export class WebGitGraphElement extends HTMLElementBase {
       windowElement.append(details);
     }
 
-    if (this.#page.hasMore && end === this.#filteredCommits.length) {
+    if (this.#page.hasMore && end === this.#page.commits.length) {
       const button = document.createElement("button");
       button.className = "action load-more";
       button.type = "button";
@@ -880,7 +1002,34 @@ export class WebGitGraphElement extends HTMLElementBase {
       actions.append(open);
     }
     summary.append(actions);
-    this.#renderFileTree(files, this.#details?.changes ?? []);
+    const changes = this.#details?.changes ?? [];
+    // A commit's file diffs run from its first parent; the working-tree
+    // pseudo commit lists HEAD there, so the same shape covers both. Root
+    // commits have no parent revision to diff against and stay event-only.
+    const parentOid = commit.parents[0];
+    const diff: FileDiffContext | undefined =
+      parentOid && this.#provider?.getFileDiff
+        ? { base: { kind: "commit", oid: parentOid }, head: revisionFor(commit) }
+        : undefined;
+    if (this.#fileDiff) {
+      summary.append(this.#patchElement());
+    } else if (diff && changes.length > 0) {
+      const hint = document.createElement("p");
+      hint.className = "no-changes";
+      hint.textContent = "Select a file to view its diff.";
+      summary.append(hint);
+    }
+    this.#renderFileTree(files, changes, diff);
+  }
+
+  #patchElement(): HTMLElement {
+    const patch = document.createElement("pre");
+    patch.className = "patch";
+    patch.textContent =
+      this.#fileDiff?.patch ??
+      this.#fileDiff?.unavailableReason ??
+      (this.#fileDiff?.binary ? "Binary file — patch unavailable." : "No textual patch.");
+    return patch;
   }
 
   #renderComparison(summary: HTMLElement, files: HTMLElement, comparison: GitGraphComparison): void {
@@ -893,26 +1042,24 @@ export class WebGitGraphElement extends HTMLElementBase {
     stats.textContent = `${comparison.changes.length} files · +${comparison.additions} −${comparison.deletions}${comparison.truncated ? " · truncated" : ""}`;
     summary.append(stats);
     if (this.#fileDiff) {
-      const patch = document.createElement("pre");
-      patch.className = "patch";
-      patch.textContent =
-        this.#fileDiff.patch ??
-        this.#fileDiff.unavailableReason ??
-        (this.#fileDiff.binary ? "Binary file — patch unavailable." : "No textual patch.");
-      summary.append(patch);
+      summary.append(this.#patchElement());
     } else if (comparison.changes.length > 0) {
       const hint = document.createElement("p");
       hint.className = "no-changes";
       hint.textContent = "Select a file to view its diff.";
       summary.append(hint);
     }
-    this.#renderFileTree(files, comparison.changes, comparison);
+    this.#renderFileTree(files, comparison.changes, {
+      base: comparison.base,
+      head: comparison.head,
+      comparison
+    });
   }
 
   #renderFileTree(
     container: HTMLElement,
     changes: readonly GitGraphChange[],
-    comparison?: GitGraphComparison
+    diff?: FileDiffContext
   ): void {
     if (changes.length === 0) {
       container.innerHTML = `<p class="no-changes">No file changes.</p>`;
@@ -920,7 +1067,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     }
     const list = document.createElement("ul");
     list.className = "tree";
-    this.#renderTreeLevel(list, buildFileTree(changes), "", comparison);
+    this.#renderTreeLevel(list, buildFileTree(changes), "", diff);
     container.append(list);
   }
 
@@ -928,7 +1075,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     list: HTMLElement,
     node: FileTreeNode,
     prefix: string,
-    comparison?: GitGraphComparison
+    diff?: FileDiffContext
   ): void {
     for (let [name, dir] of [...node.dirs.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
       // Join single-child folder chains the way file explorers compact them.
@@ -959,7 +1106,7 @@ export class WebGitGraphElement extends HTMLElementBase {
       item.append(toggle);
       if (!collapsed) {
         const children = document.createElement("ul");
-        this.#renderTreeLevel(children, dir, path, comparison);
+        this.#renderTreeLevel(children, dir, path, diff);
         item.append(children);
       }
       list.append(item);
@@ -969,7 +1116,7 @@ export class WebGitGraphElement extends HTMLElementBase {
       const button = document.createElement("button");
       button.className = "tree-file";
       button.type = "button";
-      if (comparison && this.#fileDiff?.path === change.path) button.classList.add("active");
+      if (this.#fileDiff?.path === change.path) button.classList.add("active");
       button.title = change.previousPath ? `${change.previousPath} → ${change.path}` : change.path;
       const code = document.createElement("span");
       code.className = `change-code ${change.kind}`;
@@ -986,19 +1133,32 @@ export class WebGitGraphElement extends HTMLElementBase {
         : `${change.additions === undefined ? "" : `+${change.additions}`} ${change.deletions === undefined ? "" : `−${change.deletions}`}`.trim();
       button.append(code, path, stats);
       button.addEventListener("click", async () => {
-        this.dispatchEvent(
+        const proceed = this.dispatchEvent(
           new CustomEvent("gitgraph-file-open", {
             bubbles: true,
             composed: true,
-            detail: { change, comparison }
+            cancelable: true,
+            detail: { change, comparison: diff?.comparison }
           })
         );
-        if (!comparison || !this.#provider?.getFileDiff) return;
+        if (!proceed || !diff || !this.#provider?.getFileDiff) return;
+        if (change.unavailableReason) {
+          // The provider already announced there is no readable patch (e.g.
+          // untracked working-tree files); skip the round trip.
+          this.#fileDiff = {
+            base: diff.base,
+            head: diff.head,
+            path: change.path,
+            unavailableReason: change.unavailableReason
+          };
+          this.#renderDetailsPanel();
+          return;
+        }
         try {
           this.#fileDiff = await this.#provider.getFileDiff(
             this.#page.repositoryId,
-            comparison.base,
-            comparison.head,
+            diff.base,
+            diff.head,
             change.path,
             3
           );
@@ -1030,7 +1190,7 @@ export class WebGitGraphElement extends HTMLElementBase {
 
   #selectedIndex(): number {
     if (!this.#selectedOid) return -1;
-    return this.#filteredCommits.findIndex((commit) => commit.oid === this.#selectedOid);
+    return this.#page.commits.findIndex((commit) => commit.oid === this.#selectedOid);
   }
 
   #rowTop(index: number, selectedIndex: number): number {
@@ -1053,7 +1213,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     if (target !== scroller.scrollTop) scroller.scrollTo({ top: target, behavior: "smooth" });
   }
 
-  async #load(append: boolean, ref?: string): Promise<void> {
+  async #load(append: boolean): Promise<void> {
     if (!this.#provider || (append && !this.#page.hasMore)) return;
     this.#abort?.abort();
     this.#abort = new AbortController();
@@ -1064,7 +1224,7 @@ export class WebGitGraphElement extends HTMLElementBase {
     try {
       const page = await this.#provider.getHistory({
         repositoryId: this.#page.repositoryId,
-        ref,
+        ref: this.#selectedRef,
         cursor: append ? this.#page.cursor : undefined,
         limit: 200,
         includeWorkingTree: true,

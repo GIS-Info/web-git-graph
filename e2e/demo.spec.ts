@@ -36,19 +36,41 @@ test("renders the graph and opens commit details", async ({ page }) => {
   await expect(details).toHaveCount(0);
 });
 
-test("filters commits and switches theme", async ({ page }) => {
+test("highlights search matches without collapsing the graph", async ({ page }) => {
   await gotoDemo(page);
   const graph = page.locator("web-git-graph");
+  const rowCount = await graph.locator(".row").count();
+
   await graph.locator(".search").fill("octopus-does-not-exist");
-  await expect(graph.locator(".empty")).toBeVisible();
+  await expect(graph.locator(".search-count")).toHaveText("0/0");
+  // The DAG stays intact while searching: no rows are filtered away.
+  await expect(graph.locator(".row")).toHaveCount(rowCount);
+
   await graph.locator(".search").fill("provider");
-  await expect(graph.locator(".row")).toHaveCount(1);
+  await expect(graph.locator(".search-count")).toHaveText("1/1");
+  await expect(graph.locator(".row.match")).toHaveCount(1);
+  await expect(graph.locator(".row.match-current")).toHaveCount(1);
+  await expect(graph.locator(".row")).toHaveCount(rowCount);
+
   const initialTheme = await graph.getAttribute("theme");
   await graph.locator(".theme-toggle").click();
   await expect(graph).toHaveAttribute(
     "theme",
     initialTheme === "light" ? "dark" : "light"
   );
+});
+
+test("search keeps focus and matches while typing key by key", async ({ page }) => {
+  await gotoDemo(page);
+  const graph = page.locator("web-git-graph");
+  const search = graph.locator(".search");
+  await search.click();
+  await page.keyboard.type("provider", { delay: 40 });
+  // Every keystroke re-renders match state; the input must survive all of
+  // them without being rebuilt (which would drop focus and swallow keys).
+  await expect(search).toHaveValue("provider");
+  await expect(search).toBeFocused();
+  await expect(graph.locator(".search-count")).toHaveText("1/1");
 });
 
 test("switches and persists page language and theme", async ({ page }) => {
@@ -150,5 +172,11 @@ test("connects the demo to the local Node backend through HTTP", async ({ page }
 
   await graph.locator(".row").nth(1).click();
   await expect(graph.locator(".inline-details .meta")).toContainText("Commit");
-  await expect(graph.locator(".inline-details .tree-file").first()).toBeVisible();
+  const firstFile = graph.locator(".inline-details .tree-file").first();
+  await expect(firstFile).toBeVisible();
+
+  // Clicking a file in single-commit details renders its patch inline.
+  await firstFile.click();
+  await expect(graph.locator(".inline-details .patch")).toBeVisible();
+  await expect(firstFile).toHaveClass(/active/);
 });
