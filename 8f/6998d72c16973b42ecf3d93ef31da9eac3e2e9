@@ -1,0 +1,65 @@
+packages/web/src/index.ts
+  s_22ebc5ce28f78e::t_88f74e9058f371 4-8
+packages/web/src/providers/github.ts
+  s_22ebc5ce28f78e::t_8e336f1e8ff106 179-184
+packages/web/src/providers/http.ts
+  s_22ebc5ce28f78e::t_74c436152b2cd5 49-50
+packages/web/src/web-component.ts
+  s_22ebc5ce28f78e::t_81502637fc47a1 299-302,304-318,322-358
+  s_22ebc5ce28f78e::t_68f278fb6dd0c2 704,711-713
+  s_22ebc5ce28f78e::t_b87c2776e71aff 506-561
+  s_22ebc5ce28f78e::t_1049fa36240d00 84-90
+  s_22ebc5ce28f78e::t_ec2293aeed1ad0 1289,1292
+  s_22ebc5ce28f78e::t_f0c58a80f4151d 1423-1438
+  s_22ebc5ce28f78e::t_f82b983b8f29e8 745,753,756-759
+  s_22ebc5ce28f78e::t_7f688ebdfbddea 1199-1200
+  s_22ebc5ce28f78e::t_0301a2a3ba3844 687-690
+  s_22ebc5ce28f78e::t_bb687ee71c18f5 1738
+  s_22ebc5ce28f78e::t_3ee2bec9997a78 1124-1129
+  s_22ebc5ce28f78e::t_234694a00f78cd 1679-1682
+  s_22ebc5ce28f78e::t_62e2f99ecb1a18 409,417-420
+  s_22ebc5ce28f78e::t_090c1abc252948 277-278,280
+  s_22ebc5ce28f78e::t_183bec5996664e 782-910,912-918,921-1062,1683
+  s_22ebc5ce28f78e::t_e540187ab28ff9 1172
+  s_22ebc5ce28f78e::t_1c50545f2e33e8 1168-1171,1173-1175
+  s_22ebc5ce28f78e::t_b31fa0790169d3 154-157,159-165,171-205
+  s_22ebc5ce28f78e::t_30b92b88fdbd60 1269,1483-1500
+  s_22ebc5ce28f78e::t_8cc0e13e3af740 70
+  s_22ebc5ce28f78e::t_aded781df98c03 1223-1232,1237,1247-1249,1254-1257,1266-1268
+  s_22ebc5ce28f78e::t_c5bf375fed3338 1284,1290-1291,1293-1294
+  s_22ebc5ce28f78e::t_093d49ba998b17 1697
+  s_22ebc5ce28f78e::t_6280d68d51ace7 303
+  s_22ebc5ce28f78e::t_d648a1de86c80e 1465-1466
+  s_22ebc5ce28f78e::t_16c3f895e5911d 16-23
+  s_22ebc5ce28f78e::t_c79a39d20d0e68 471
+  s_22ebc5ce28f78e::t_b3b250ecab1737 427-428
+  s_22ebc5ce28f78e::t_0a9fd5481464f1 450-453,456-457
+  s_22ebc5ce28f78e::t_aeb173f5166668 669,671
+  s_22ebc5ce28f78e::t_5d1b63f6df7f1b 1684
+packages/web/src/events.ts
+  s_22ebc5ce28f78e::t_bc7a352d716b90 20-27
+e2e/demo.spec.ts
+  s_22ebc5ce28f78e::t_96406e667e1548 152-153,155,160-163,166-168,170-173,175,180,182,195,217,219
+  s_22ebc5ce28f78e::t_fe963a4975720c 78-102,105-124,127-151,154,156-159,164-165,169,174,176-179,181,190-194,196,200,205,211-216,218,220-229
+  s_22ebc5ce28f78e::t_d8204892fc5007 183-189,197-199,201-204,206-210
+  s_22ebc5ce28f78e::t_0b3f512cbdb7ee 315
+  s_22ebc5ce28f78e::t_d7c617b77b6d52 3-4
+  s_22ebc5ce28f78e::t_834b5f2fa8a1f4 125-126
+  s_22ebc5ce28f78e::t_a715f618f797a4 103-104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "8f6998d72c16973b42ecf3d93ef31da9eac3e2e9",
+  "prompts": {},
+  "sessions": {
+    "s_22ebc5ce28f78e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "095033a0-2478-423d-93f3-f17d0859397a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
