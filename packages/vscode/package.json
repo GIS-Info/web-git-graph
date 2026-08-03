@@ -1,52 +1,84 @@
 {
-  "name": "@web-git-graph/vscode",
+  "name": "web-git-graph",
   "displayName": "Web Git Graph",
   "version": "0.1.0",
-  "description": "VS Code host for the Web Git Graph renderer and local Git backend.",
+  "description": "Read-only Git history graph with deterministic lanes, commit details and revision diffs.",
   "type": "module",
   "license": "MIT",
   "publisher": "kian-zh",
+  "icon": "media/icon.png",
+  "homepage": "https://github.com/GIS-Info/web-git-graph",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GIS-Info/web-git-graph.git",
+    "directory": "packages/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/GIS-Info/web-git-graph/issues"
+  },
   "engines": {
-    "vscode": "^1.95.0",
-    "node": ">=20"
+    "vscode": "^1.95.0"
   },
   "categories": [
     "SCM Providers",
     "Visualization"
   ],
+  "keywords": [
+    "git",
+    "git graph",
+    "git history",
+    "git log",
+    "scm"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Web Git Graph executes read-only Git commands against workspace folders."
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "Web Git Graph reads local Git repositories from disk."
+    }
+  },
   "activationEvents": [
-    "onCommand:webGitGraph.open"
+    "onWebviewPanel:webGitGraph.history"
   ],
   "main": "./dist/extension/extension.cjs",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE",
-    "package.json"
-  ],
   "contributes": {
     "commands": [
       {
         "command": "webGitGraph.open",
-        "title": "Web Git Graph: Open Graph",
-        "category": "Web Git Graph"
+        "title": "Open Graph",
+        "category": "Web Git Graph",
+        "icon": "$(git-branch)"
       }
-    ]
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "webGitGraph.open",
+          "group": "navigation",
+          "when": "scmProvider == git"
+        }
+      ]
+    }
   },
   "scripts": {
     "build": "tsup",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "pack:check": "pnpm build && npm pack --dry-run --cache .npm-cache"
-  },
-  "dependencies": {
-    "@web-git-graph/node": "workspace:*",
-    "@web-git-graph/protocol": "workspace:*",
-    "@web-git-graph/web": "workspace:*"
+    "package": "pnpm build && pnpm dlx @vscode/vsce package --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
+    "@types/vscode": "~1.95.0",
+    "@web-git-graph/node": "workspace:*",
+    "@web-git-graph/protocol": "workspace:*",
+    "@web-git-graph/web": "workspace:*",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"

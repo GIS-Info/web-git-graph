@@ -4,6 +4,7 @@ coverage
 playwright-report
 test-results
 *.tgz
+*.vsix
 .DS_Store
 .env
 .env.*

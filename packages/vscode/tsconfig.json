@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node", "vitest/globals"]
+    "types": ["node", "vitest/globals", "vscode"]
   },
   "include": ["src", "webview", "test", "tsup.config.ts"]
 }

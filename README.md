@@ -83,7 +83,7 @@ and provider API stay the same across frameworks.
 @web-git-graph/web   @web-git-graph/node
        ▲         ▲
        └────┬────┘
- @web-git-graph/vscode
+  web-git-graph (vscode)
 ```
 
 | Module | Responsibility |
@@ -91,7 +91,7 @@ and provider API stay the same across frameworks.
 | `@web-git-graph/protocol` | Transport-neutral DTOs, schemas, protocol version, OpenAPI, and errors |
 | `@web-git-graph/web` | Lane layout, Web Component, GitHub provider, and HTTP provider |
 | `@web-git-graph/node` | Local Git backend, snapshot pagination, HTTP handlers, and read-only CLI |
-| `@web-git-graph/vscode` | VS Code Webview, typed RPC, and Extension Host integration |
+| `web-git-graph` (VS Code) | VS Code Webview, typed RPC, and Extension Host integration |
 | `@web-git-graph/demo` | Private GitHub Pages application and integration fixture |
 
 The dependency graph is intentionally one-way. The protocol contains no DOM,
@@ -212,7 +212,7 @@ Provider API 都保持一致。
 @web-git-graph/web   @web-git-graph/node
        ▲         ▲
        └────┬────┘
- @web-git-graph/vscode
+  web-git-graph (vscode)
 ```
 
 | 模块 | 职责 |
@@ -220,7 +220,7 @@ Provider API 都保持一致。
 | `@web-git-graph/protocol` | 与传输无关的 DTO、Schema、协议版本、OpenAPI 与错误类型 |
 | `@web-git-graph/web` | 泳道布局、Web Component、GitHub Provider 与 HTTP Provider |
 | `@web-git-graph/node` | 本地 Git 后端、快照分页、HTTP handlers 与只读 CLI |
-| `@web-git-graph/vscode` | VS Code Webview、类型化 RPC 与 Extension Host 集成 |
+| `web-git-graph`（VS Code） | VS Code Webview、类型化 RPC 与 Extension Host 集成 |
 | `@web-git-graph/demo` | 私有 GitHub Pages 应用与集成测试样例 |
 
 依赖方向保持单向：Protocol 不包含 DOM、Node、HTTP 状态码或 VS Code 类型；

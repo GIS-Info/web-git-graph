@@ -1,5 +1,6 @@
 import type {
   GitGraphCapabilities,
+  GitGraphChange,
   GitGraphCommitDetails,
   GitGraphComparison,
   GitGraphFileDiff,
@@ -42,7 +43,19 @@ export interface GitGraphRpcMethods {
   };
   openFile: {
     params: { repositoryId: string; path: string };
-    result: { opened: true };
+    result: { opened: boolean };
+  };
+  openDiff: {
+    params: {
+      repositoryId: string;
+      path: string;
+      previousPath?: string;
+      kind: GitGraphChange["kind"];
+      binary?: boolean;
+      base: GitGraphRevision;
+      head: GitGraphRevision;
+    };
+    result: { opened: boolean };
   };
 }
 
@@ -69,3 +82,10 @@ export type GitGraphRpcResponse =
       method: GitGraphRpcMethod;
       error: GitGraphProtocolErrorBody["error"];
     };
+
+/** Pushed by the extension host without a matching webview request. */
+export interface GitGraphRpcRefreshNotification {
+  method: "refresh";
+}
+
+export type GitGraphRpcServerMessage = GitGraphRpcResponse | GitGraphRpcRefreshNotification;

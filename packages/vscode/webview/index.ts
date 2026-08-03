@@ -5,12 +5,12 @@ import {
   type GitGraphComparison,
   type GitGraphFileDiff,
   type GitGraphPage,
-  type GitGraphRepository,
   type GitGraphRevision
 } from "@web-git-graph/protocol";
 import type {
   GitGraphHistoryRequest,
-  GitGraphProvider
+  GitGraphProvider,
+  WebGitGraphElementEventMap
 } from "@web-git-graph/web";
 import {
   defineWebGitGraph,
@@ -19,7 +19,7 @@ import {
 import type {
   GitGraphRpcMethod,
   GitGraphRpcMethods,
-  GitGraphRpcResponse
+  GitGraphRpcServerMessage
 } from "../src/rpc";
 
 interface VsCodeState {
@@ -47,20 +47,24 @@ const pending = new Map<
 >();
 let sequence = 0;
 
-window.addEventListener("message", (event: MessageEvent<GitGraphRpcResponse>) => {
-  const response = event.data;
-  const request = pending.get(response.id);
+window.addEventListener("message", (event: MessageEvent<GitGraphRpcServerMessage>) => {
+  const message = event.data;
+  if (!("id" in message)) {
+    if (message.method === "refresh") void refresh();
+    return;
+  }
+  const request = pending.get(message.id);
   if (!request) return;
-  pending.delete(response.id);
-  if ("error" in response) {
+  pending.delete(message.id);
+  if ("error" in message) {
     request.reject(
-      new GitGraphProtocolError(response.error.code, response.error.message, {
-        retryable: response.error.retryable,
-        details: response.error.details
+      new GitGraphProtocolError(message.error.code, message.error.message, {
+        retryable: message.error.retryable,
+        details: message.error.details
       })
     );
   } else {
-    request.resolve(response.result);
+    request.resolve(message.result);
   }
 });
 
@@ -159,45 +163,71 @@ class VsCodeGitGraphProvider implements GitGraphProvider {
 
 const graph = document.querySelector<WebGitGraphElement>("#graph")!;
 const repositorySelect = document.querySelector<HTMLSelectElement>("#repository")!;
-const state = vscode.getState() ?? {};
 
 function applyTheme(): void {
   graph.theme = document.body.classList.contains("vscode-light") ? "light" : "dark";
 }
 
-function selectRepository(
-  repositoryId: string,
-  selectedOid?: string
-): void {
+function selectRepository(repositoryId: string, selectedOid?: string): void {
   repositorySelect.value = repositoryId;
   graph.provider = new VsCodeGitGraphProvider(repositoryId);
   vscode.setState({ repositoryId, selectedOid });
 }
 
-const repositories = await rpc("repositories", {});
-for (const repository of repositories) {
-  const option = document.createElement("option");
-  option.value = repository.id;
-  option.textContent = repository.name;
-  repositorySelect.append(option);
+async function loadRepositories(): Promise<void> {
+  const repositories = await rpc("repositories", {});
+  const state = vscode.getState() ?? {};
+  const preferred = repositorySelect.value || state.repositoryId;
+  repositorySelect.replaceChildren();
+  for (const repository of repositories) {
+    const option = document.createElement("option");
+    option.value = repository.id;
+    option.textContent = repository.name;
+    repositorySelect.append(option);
+  }
+  const target =
+    repositories.find((repository) => repository.id === preferred) ?? repositories[0];
+  if (target) selectRepository(target.id, state.selectedOid);
 }
 
-const initialRepository =
-  repositories.find((repository: GitGraphRepository) => repository.id === state.repositoryId) ??
-  repositories[0];
-if (initialRepository) {
-  selectRepository(initialRepository.id, state.selectedOid);
+// Pushed by the extension host when .git changes, workspace folders change or
+// workspace trust is granted. Reloading through loadRepositories keeps the
+// repository list, the graph and the saved commit selection in sync.
+async function refresh(): Promise<void> {
+  try {
+    await loadRepositories();
+  } catch (error) {
+    console.error("Web Git Graph refresh failed", error);
+  }
 }
 
 repositorySelect.addEventListener("change", () => selectRepository(repositorySelect.value));
 graph.addEventListener("gitgraph-commit-select", (event) => {
-  const commit = (event as CustomEvent<{ commit: { oid: string } }>).detail.commit;
+  const commit = (event as WebGitGraphElementEventMap["gitgraph-commit-select"]).detail.commit;
   vscode.setState({ ...vscode.getState(), selectedOid: commit.oid });
 });
 graph.addEventListener("gitgraph-file-open", (event) => {
-  const change = (event as CustomEvent<{ change: { path: string } }>).detail.change;
+  const detail = (event as WebGitGraphElementEventMap["gitgraph-file-open"]).detail;
   const repositoryId = repositorySelect.value;
-  if (repositoryId) void rpc("openFile", { repositoryId, path: change.path });
+  if (!repositoryId) return;
+  // VS Code shows revision diffs in its native diff editor instead of the
+  // component's inline patch view.
+  event.preventDefault();
+  const { change, base, head } = detail;
+  if (base && head) {
+    void rpc("openDiff", {
+      repositoryId,
+      path: change.path,
+      ...(change.previousPath ? { previousPath: change.previousPath } : {}),
+      kind: change.kind,
+      ...(change.binary ? { binary: true } : {}),
+      base,
+      head
+    });
+  } else {
+    // No diff context (e.g. a root commit): fall back to the working-tree file.
+    void rpc("openFile", { repositoryId, path: change.path });
+  }
 });
 
 applyTheme();
@@ -205,3 +235,4 @@ new MutationObserver(applyTheme).observe(document.body, {
   attributes: true,
   attributeFilter: ["class"]
 });
+await refresh();

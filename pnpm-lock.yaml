@@ -72,7 +72,13 @@ importers:
         version: 3.2.7(@types/node@24.13.3)
 
   packages/vscode:
-    dependencies:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.3.0
+        version: 24.13.3
+      '@types/vscode':
+        specifier: ~1.95.0
+        version: 1.95.0
       '@web-git-graph/node':
         specifier: workspace:*
         version: link:../node
@@ -82,10 +88,6 @@ importers:
       '@web-git-graph/web':
         specifier: workspace:*
         version: link:../web
-    devDependencies:
-      '@types/node':
-        specifier: ^24.3.0
-        version: 24.13.3
       tsup:
         specifier: ^8.5.0
         version: 8.5.1(postcss@8.5.23)(typescript@5.9.3)
@@ -586,6 +588,9 @@ packages:
 
   '@types/node@24.13.3':
     resolution: {integrity: sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q==}
+
+  '@types/vscode@1.95.0':
+    resolution: {integrity: sha512-0LBD8TEiNbet3NvWsmn59zLzOFu/txSlGxnv5yAFHCrhG9WvAnR3IvfHzMOs2aeWqgvNjq9pO99IUw8d3n+unw==}
 
   '@vitest/expect@3.2.7':
     resolution: {integrity: sha512-E8eBXaKibuvH2pSZErOjdVb5vF4PbKYcrnluBTYxEk1l/VhhwZg1kZQsdtjq+CsF5CFydf2Rdkz7jDHKSisi3w==}
@@ -1260,6 +1265,8 @@ snapshots:
   '@types/node@24.13.3':
     dependencies:
       undici-types: 7.18.2
+
+  '@types/vscode@1.95.0': {}
 
   '@vitest/expect@3.2.7':
     dependencies:

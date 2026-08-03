@@ -1,18 +1,27 @@
 import { randomBytes } from "node:crypto";
-import { isAbsolute } from "node:path";
 import * as vscode from "vscode";
-import { GitGraphProtocolError } from "@web-git-graph/protocol";
+import { GitGraphProtocolError, type GitGraphRevision } from "@web-git-graph/protocol";
 import { LocalGitBackend } from "@web-git-graph/node";
-import type {
-  GitGraphRpcRequest,
-  GitGraphRpcResponse
-} from "./rpc";
+import { isSafeRelativePath } from "./paths";
+import type { GitGraphRpcRequest, GitGraphRpcResponse } from "./rpc";
 
 const VIEW_TYPE = "webGitGraph.history";
 const OPEN_COMMAND = "webGitGraph.open";
+const DIFF_SCHEME = "web-git-graph";
+const REFRESH_NOTIFICATION = { method: "refresh" } as const;
+
+interface HostSession {
+  key: string;
+  folders: readonly vscode.WorkspaceFolder[];
+  backend: LocalGitBackend;
+}
+
+let session: HostSession | undefined;
+let currentPanel: vscode.WebviewPanel | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider(DIFF_SCHEME, diffContentProvider),
     vscode.commands.registerCommand(OPEN_COMMAND, async () => {
       if (!vscode.workspace.isTrusted) {
         await vscode.window.showWarningMessage(
@@ -20,22 +29,16 @@ export function activate(context: vscode.ExtensionContext): void {
         );
         return;
       }
-      const folders = vscode.workspace.workspaceFolders ?? [];
-      if (folders.length === 0) {
+      if ((vscode.workspace.workspaceFolders ?? []).length === 0) {
         await vscode.window.showInformationMessage(
           "Open a folder or workspace before launching Web Git Graph."
         );
         return;
       }
-
-      const repositories = Object.fromEntries(
-        folders.map((folder, index) => [`workspace-${index}`, folder.uri.fsPath])
-      );
-      const roots = folders.map((folder) => folder.uri.fsPath);
-      const backend = new LocalGitBackend({
-        repositories,
-        allowedRoots: roots
-      });
+      if (currentPanel) {
+        currentPanel.reveal();
+        return;
+      }
       const panel = vscode.window.createWebviewPanel(
         VIEW_TYPE,
         "Web Git Graph",
@@ -43,26 +46,98 @@ export function activate(context: vscode.ExtensionContext): void {
         {
           enableScripts: true,
           retainContextWhenHidden: true,
-          localResourceRoots: [
-            vscode.Uri.joinPath(context.extensionUri, "dist", "webview")
-          ]
+          localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "dist", "webview")]
         }
       );
-      panel.webview.html = webviewHtml(panel.webview, context.extensionUri);
-      panel.webview.onDidReceiveMessage(
-        async (message) => {
-          if (!isRpcRequest(message)) return;
-          const response = await dispatchRpc(message, backend, folders);
-          await panel.webview.postMessage(response);
-        },
-        undefined,
-        context.subscriptions
-      );
+      attachPanel(context, panel);
+    }),
+    vscode.window.registerWebviewPanelSerializer(VIEW_TYPE, {
+      async deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+        attachPanel(context, panel);
+      }
     })
   );
 }
 
 export function deactivate(): void {}
+
+/**
+ * The backend is derived from the current workspace folders and rebuilt
+ * whenever they change, so repository ids stay aligned with folder indexes.
+ */
+function currentSession(): HostSession {
+  const folders = vscode.workspace.workspaceFolders ?? [];
+  const key = folders.map((folder) => folder.uri.toString()).join("\n");
+  if (session?.key !== key) {
+    session = {
+      key,
+      folders,
+      backend: new LocalGitBackend({
+        repositories: Object.fromEntries(
+          folders.map((folder, index) => [`workspace-${index}`, folder.uri.fsPath])
+        ),
+        allowedRoots: folders.map((folder) => folder.uri.fsPath)
+      })
+    };
+  }
+  return session;
+}
+
+function attachPanel(context: vscode.ExtensionContext, panel: vscode.WebviewPanel): void {
+  currentPanel = panel;
+  panel.webview.options = {
+    enableScripts: true,
+    localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "dist", "webview")]
+  };
+  panel.webview.html = webviewHtml(panel.webview, context.extensionUri);
+
+  const subscriptions: vscode.Disposable[] = [];
+  let watchers: vscode.Disposable[] = [];
+  let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  // Git touches HEAD/index/refs in quick bursts; the debounce collapses one
+  // operation into a single webview reload.
+  const notifyRefresh = () => {
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => {
+      void panel.webview.postMessage(REFRESH_NOTIFICATION);
+    }, 400);
+  };
+  const watchRepositories = () => {
+    for (const watcher of watchers) watcher.dispose();
+    watchers = (vscode.workspace.workspaceFolders ?? []).map((folder) => {
+      const watcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(folder, ".git/{HEAD,ORIG_HEAD,index,refs/**}")
+      );
+      watcher.onDidChange(notifyRefresh);
+      watcher.onDidCreate(notifyRefresh);
+      watcher.onDidDelete(notifyRefresh);
+      return watcher;
+    });
+  };
+  watchRepositories();
+  subscriptions.push(
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      watchRepositories();
+      notifyRefresh();
+    }),
+    vscode.workspace.onDidGrantWorkspaceTrust(() => notifyRefresh())
+  );
+  panel.webview.onDidReceiveMessage(
+    async (message) => {
+      if (!isRpcRequest(message)) return;
+      const response = await dispatchRpc(message);
+      await panel.webview.postMessage(response);
+    },
+    undefined,
+    subscriptions
+  );
+  panel.onDidDispose(() => {
+    if (refreshTimer) clearTimeout(refreshTimer);
+    for (const watcher of watchers) watcher.dispose();
+    for (const subscription of subscriptions) subscription.dispose();
+    if (currentPanel === panel) currentPanel = undefined;
+  });
+}
 
 function isRpcRequest(value: unknown): value is GitGraphRpcRequest {
   if (!value || typeof value !== "object") return false;
@@ -75,13 +150,9 @@ function isRpcRequest(value: unknown): value is GitGraphRpcRequest {
   );
 }
 
-async function dispatchRpc(
-  request: GitGraphRpcRequest,
-  backend: LocalGitBackend,
-  folders: readonly vscode.WorkspaceFolder[]
-): Promise<GitGraphRpcResponse> {
+async function dispatchRpc(request: GitGraphRpcRequest): Promise<GitGraphRpcResponse> {
   try {
-    const result = await executeRpc(request, backend, folders);
+    const result = await executeRpc(request);
     return {
       id: request.id,
       method: request.method,
@@ -104,11 +175,14 @@ async function dispatchRpc(
   }
 }
 
-async function executeRpc(
-  request: GitGraphRpcRequest,
-  backend: LocalGitBackend,
-  folders: readonly vscode.WorkspaceFolder[]
-): Promise<unknown> {
+async function executeRpc(request: GitGraphRpcRequest): Promise<unknown> {
+  if (!vscode.workspace.isTrusted) {
+    throw new GitGraphProtocolError(
+      "forbidden",
+      "Trust this workspace before Web Git Graph can execute read-only Git commands."
+    );
+  }
+  const { backend, folders } = currentSession();
   switch (request.method) {
     case "repositories":
       return backend.listRepositories();
@@ -136,26 +210,108 @@ async function executeRpc(
         request.params.context
       );
     case "openFile": {
-      const index = Number(request.params.repositoryId.replace(/^workspace-/, ""));
-      const folder = folders[index];
+      const folder = workspaceFolder(folders, request.params.repositoryId);
       const path = request.params.path;
-      if (
-        !folder ||
-        !path ||
-        path.includes("\0") ||
-        isAbsolute(path) ||
-        path.split(/[\\/]/).includes("..")
-      ) {
+      if (!folder || !isSafeRelativePath(path)) {
         throw new GitGraphProtocolError("bad_request", "Invalid workspace file path.");
       }
       const document = await vscode.workspace.openTextDocument(
         vscode.Uri.joinPath(folder.uri, ...path.split("/"))
       );
-      await vscode.window.showTextDocument(document);
+      await vscode.window.showTextDocument(document, { preview: true });
+      return { opened: true };
+    }
+    case "openDiff": {
+      const params = request.params;
+      const folder = workspaceFolder(folders, params.repositoryId);
+      if (
+        !folder ||
+        !isSafeRelativePath(params.path) ||
+        (params.previousPath !== undefined && !isSafeRelativePath(params.previousPath))
+      ) {
+        throw new GitGraphProtocolError("bad_request", "Invalid workspace file path.");
+      }
+      if (params.binary) {
+        await vscode.window.showInformationMessage(
+          `${params.path} is a binary file; no text diff is available.`
+        );
+        return { opened: false };
+      }
+      const basePath = params.previousPath ?? params.path;
+      const left =
+        params.kind === "add" || params.base.kind === "working-tree"
+          ? emptyContentUri(basePath)
+          : revisionContentUri(params.repositoryId, params.base.oid, basePath);
+      const right =
+        params.kind === "delete"
+          ? emptyContentUri(params.path)
+          : params.head.kind === "working-tree"
+            ? vscode.Uri.joinPath(folder.uri, ...params.path.split("/"))
+            : revisionContentUri(params.repositoryId, params.head.oid, params.path);
+      const title = `${params.path} (${revisionLabel(params.base)} ⟷ ${revisionLabel(params.head)})`;
+      await vscode.commands.executeCommand("vscode.diff", left, right, title, {
+        preview: true
+      });
       return { opened: true };
     }
   }
 }
+
+function workspaceFolder(
+  folders: readonly vscode.WorkspaceFolder[],
+  repositoryId: string
+): vscode.WorkspaceFolder | undefined {
+  const match = /^workspace-(\d+)$/.exec(repositoryId);
+  return match ? folders[Number(match[1])] : undefined;
+}
+
+function revisionLabel(revision: GitGraphRevision): string {
+  return revision.kind === "working-tree" ? "Working Tree" : revision.oid.slice(0, 8);
+}
+
+interface DiffUriQuery {
+  repositoryId?: string;
+  oid?: string;
+  path?: string;
+  empty?: boolean;
+}
+
+function revisionContentUri(repositoryId: string, oid: string, path: string): vscode.Uri {
+  return vscode.Uri.from({
+    scheme: DIFF_SCHEME,
+    // The uri path carries the file extension so the diff editor picks the
+    // right language mode; the query carries what the provider needs.
+    path: `/${path}`,
+    query: JSON.stringify({ repositoryId, oid, path } satisfies DiffUriQuery)
+  });
+}
+
+function emptyContentUri(path: string): vscode.Uri {
+  return vscode.Uri.from({
+    scheme: DIFF_SCHEME,
+    path: `/${path}`,
+    query: JSON.stringify({ empty: true } satisfies DiffUriQuery)
+  });
+}
+
+const diffContentProvider: vscode.TextDocumentContentProvider = {
+  async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
+    let query: DiffUriQuery;
+    try {
+      query = JSON.parse(uri.query) as DiffUriQuery;
+    } catch {
+      return "";
+    }
+    if (query.empty || !query.repositoryId || !query.oid || !query.path) return "";
+    const file = await currentSession().backend.getFileContent(
+      query.repositoryId,
+      { kind: "commit", oid: query.oid },
+      query.path
+    );
+    if (file.binary) return "(binary file)";
+    return file.truncated ? `${file.content}\n… (content truncated)` : file.content;
+  }
+};
 
 function webviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   const nonce = randomBytes(18).toString("base64");

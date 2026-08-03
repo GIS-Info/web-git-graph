@@ -1,0 +1,10 @@
+.vscodeignore
+.npm-cache/**
+node_modules/**
+src/**
+test/**
+webview/**
+tsconfig.json
+tsup.config.ts
+dist/**/*.map
+*.vsix
