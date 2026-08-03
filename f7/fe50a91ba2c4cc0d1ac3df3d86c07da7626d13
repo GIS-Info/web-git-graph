@@ -1,0 +1,71 @@
+packages/vscode/CHANGELOG.md
+  s_2409aaa40b8183::t_7e8b0cb4da99e1 3-15
+packages/web/test/jsx.types.tsx
+  s_2409aaa40b8183::t_33afc258eee46f 1-26
+packages/node/test/handler.test.ts
+  s_2409aaa40b8183::t_1a3e468d1c953c 68-117
+packages/web/tsconfig.types.json
+  s_2409aaa40b8183::t_3003a1d439d640 1-8
+packages/web/package.json
+  s_2409aaa40b8183::t_9f3fad796fff95 64
+  s_2409aaa40b8183::t_7d951e67078150 63
+  s_2409aaa40b8183::t_d960a6a3f5cbfb 54-55
+  s_2409aaa40b8183::t_ea50e92ff558c5 33-37
+  s_2409aaa40b8183::t_dd881043473fa8 3
+packages/web/src/register.ts
+  s_2409aaa40b8183::t_30aaf908613f5d 6
+package.json
+  s_2409aaa40b8183::t_dd881043473fa8 4
+apps/demo/src/main.ts
+  s_2409aaa40b8183::t_a4cb1067de87a5 244
+packages/node/package.json
+  s_2409aaa40b8183::t_dd881043473fa8 3
+packages/protocol/package.json
+  s_2409aaa40b8183::t_dd881043473fa8 3
+packages/web/tsconfig.json
+  s_2409aaa40b8183::t_981c437f9ef8fc 8-9
+packages/node/src/handler.ts
+  s_2409aaa40b8183::t_304b898ea61432 94
+  s_2409aaa40b8183::t_101f325257bb9a 28-34
+  s_2409aaa40b8183::t_f0d32c9c2c69da 117-119,121
+  s_2409aaa40b8183::t_78d7ebb498c811 93,95-103,105-110,112,115-116,120,122-123
+  s_2409aaa40b8183::t_6e5bf3569e6c47 104
+packages/web/tsup.config.ts
+  s_2409aaa40b8183::t_3b7c6482a454b9 17-18
+  s_2409aaa40b8183::t_7a71faea83960f 7
+packages/web/src/web-component.ts
+  s_2409aaa40b8183::t_118ea75b6040d9 453-482,491
+  s_2409aaa40b8183::t_a8ce844f83ebaf 2
+  s_2409aaa40b8183::t_4245b4db54028b 483-490
+packages/node/src/cli.ts
+  s_2409aaa40b8183::t_6bc3990fed82ca 22
+  s_2409aaa40b8183::t_698a661abcf359 6
+  s_2409aaa40b8183::t_e746bc51710812 44,53
+  s_2409aaa40b8183::t_3a8d2832f884fd 68-69
+packages/node/src/index.ts
+  s_2409aaa40b8183::t_13dabb4e19cac3 13-14
+packages/web/test/event-map.types.ts
+  s_2409aaa40b8183::t_390795e0b15f44 1-49
+packages/web/src/jsx.d.ts
+  s_2409aaa40b8183::t_141b3c7b464c78 1-43
+packages/vscode/package.json
+  s_2409aaa40b8183::t_dd881043473fa8 4
+pnpm-lock.yaml
+  s_2409aaa40b8183::t_ea2c3c685d6f80 107-112,598-600,678-680,831-834,1285-1288,1366-1367,1527-1528
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "f7fe50a91ba2c4cc0d1ac3df3d86c07da7626d13",
+  "prompts": {},
+  "sessions": {
+    "s_2409aaa40b8183": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30e5f4b6-de09-44c0-9836-84d1ee8de40d",
+        "model": "ep-07p4u7vn"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
