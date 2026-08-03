@@ -1,0 +1,57 @@
+packages/vscode/.vscodeignore
+  s_22ebc5ce28f78e::t_5fc511ab354ef9 1-10
+packages/vscode/tsconfig.json
+  s_22ebc5ce28f78e::t_4d320cd40d000a 5
+packages/vscode/webview/index.ts
+  s_22ebc5ce28f78e::t_b37286304273d5 12-13,22,50-56,58-59,61-63,67,171,177-190,193-201,206,210,212-230,238
+packages/vscode/package.json
+  s_22ebc5ce28f78e::t_8c0aacd31b3f1a 2,5,9-18,20,26-45,47,54-56,58-67,78-81
+  s_22ebc5ce28f78e::t_6da4aafa925372 74
+packages/vscode/test/paths.test.ts
+  s_22ebc5ce28f78e::t_7a252f0e00b814 1-20
+packages/vscode/src/extension.ts
+  s_22ebc5ce28f78e::t_16e3453308f969 3,5-6,10-20,24,32,38-41,49,52-57,64-141,153,155,178-185,213,215,221-254,260-314
+  s_373eae2445f59d::t_f27d8fe5e44066 315
+packages/vscode/src/paths.ts
+  s_22ebc5ce28f78e::t_507ee2eb60f97b 1-17
+packages/vscode/src/rpc.ts
+  s_22ebc5ce28f78e::t_5c99b6410d87a9 46-58
+  s_22ebc5ce28f78e::t_ba56159ed5ee99 3
+  s_22ebc5ce28f78e::t_da5730ee794466 85-91
+packages/vscode/README.md
+  s_22ebc5ce28f78e::t_0ab0c4630eecff 1,3-4,6-36
+.gitignore
+  s_22ebc5ce28f78e::t_e88646d379a4ad 7
+packages/vscode/CHANGELOG.md
+  s_22ebc5ce28f78e::t_81ffa621ca79b2 1-9
+README.md
+  s_22ebc5ce28f78e::t_e7ab8d80b44b28 86,215
+  s_22ebc5ce28f78e::t_b27df939ec3a11 94
+  s_22ebc5ce28f78e::t_9e68654e3de013 223
+pnpm-lock.yaml
+  s_22ebc5ce28f78e::t_42207b5d036858 75-81,592-594,1269-1270
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "fd3f51fb3ef808de271112b391240dff535d802c",
+  "prompts": {},
+  "sessions": {
+    "s_22ebc5ce28f78e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "095033a0-2478-423d-93f3-f17d0859397a",
+        "model": "claude-fable-5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    },
+    "s_373eae2445f59d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa383-cc10-70e3-a105-2b90314a55dd",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
