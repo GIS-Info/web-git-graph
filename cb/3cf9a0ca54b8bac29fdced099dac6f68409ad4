@@ -1,0 +1,21 @@
+apps/demo/package.json
+  s_245b306c6ad0a7::t_9ab7b36f595c11 7-10
+scripts/generate-demo-history.mjs
+  s_245b306c6ad0a7::t_6e98ed34c6d7d6 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "cb3cf9a0ca54b8bac29fdced099dac6f68409ad4",
+  "prompts": {},
+  "sessions": {
+    "s_245b306c6ad0a7": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2bff5971-c361-419b-b42d-0b226c2ef9e2",
+        "model": "grok-4.5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
