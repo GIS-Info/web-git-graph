@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5
+
+- npm publishes now use Trusted Publishing (GitHub Actions OIDC) from
+  `publish.yml`, so releases no longer need a long-lived `NPM_TOKEN`.
+
 ## 1.0.4
 
 - The graph follows the host colour theme (`--vscode-*` tokens), so custom

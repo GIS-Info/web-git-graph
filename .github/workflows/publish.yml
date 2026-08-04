@@ -22,6 +22,9 @@ jobs:
         run: |
           corepack enable
           corepack prepare pnpm@10.28.1 --activate
+      # Trusted Publishing needs npm ≥ 11.5.1 for OIDC; do not set
+      # NODE_AUTH_TOKEN or the CLI falls back to legacy token auth.
+      - run: npm install -g npm@latest
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:boundaries
       - run: pnpm typecheck
@@ -31,11 +34,5 @@ jobs:
       # pnpm publish rewrites workspace:* dependencies to the real versions;
       # order follows the dependency graph (protocol first).
       - run: pnpm --filter @web-git-graph/protocol publish --access public --no-git-checks --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter @web-git-graph/web publish --access public --no-git-checks --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter @web-git-graph/node publish --access public --no-git-checks --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
