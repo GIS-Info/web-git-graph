@@ -1,0 +1,31 @@
+.github/workflows/publish.yml
+  s_9cada6d1da138d::t_cd8f692962f7df 25-27
+packages/vscode/CHANGELOG.md
+  s_9cada6d1da138d::t_2ca906ba8b5943 3-7
+package.json
+  s_9cada6d1da138d::t_1b931f875880d9 4
+packages/node/package.json
+  s_9cada6d1da138d::t_d98566d115b5c0 3
+packages/protocol/package.json
+  s_9cada6d1da138d::t_153a73cd635ffd 3
+packages/vscode/package.json
+  s_9cada6d1da138d::t_3ca283663b1812 4
+packages/web/package.json
+  s_9cada6d1da138d::t_393410af1dae49 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "708dc8a8bd06a47c9ec19185af86480cfe04218f",
+  "prompts": {},
+  "sessions": {
+    "s_9cada6d1da138d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "0c7bdc4a-23ed-421a-a52c-a7bc5e576885",
+        "model": "grok-4.5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
