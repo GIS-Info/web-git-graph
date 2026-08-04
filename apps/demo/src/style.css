@@ -491,6 +491,13 @@ form label {
   letter-spacing: .09em;
   text-transform: uppercase;
 }
+.lab-topbar form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-width: min(420px, 100%);
+}
 .repo-control {
   height: 38px;
   display: flex;
@@ -499,8 +506,9 @@ form label {
   border-radius: 8px;
   background: var(--graph-bg);
 }
-form input {
+.repo-control input {
   width: min(310px, 42vw);
+  flex: 1;
   border: 0;
   outline: 0;
   padding: 0 12px;
@@ -517,16 +525,58 @@ form button {
   background: var(--ink);
   font: 620 10px "Recursive Variable", monospace;
 }
+.token-field {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+.token-field span {
+  color: var(--faint);
+  font: 560 9px "Recursive Variable", monospace;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.token-field input {
+  height: 34px;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: 0;
+  padding: 0 12px;
+  color: var(--graph-ink);
+  background: var(--graph-bg);
+  font-size: 12px;
+}
+.token-field input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 12%, transparent);
+}
 .status-line {
   min-height: 30px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   padding: 0 4px 10px;
   color: var(--faint);
-  font: 10px "Recursive Variable", monospace;
+  font: 10px/1.45 "Recursive Variable", monospace;
 }
 .status-line p { margin: 0; }
+.status-line[data-state="rateLimited"],
+.status-line[data-state="error"] {
+  color: var(--coral);
+}
+.status-line[data-state="rateLimited"] {
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--coral) 35%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--coral) 8%, var(--surface));
+}
+.status-line[data-state="rateLimited"] .status-mark,
+.status-line[data-state="error"] .status-mark {
+  background: var(--coral);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--coral) 18%, transparent);
+}
 .status-mark { width: 5px; height: 5px; border-radius: 50%; background: var(--green-bright); }
 web-git-graph {
   height: min(600px, 70vh);
@@ -895,6 +945,7 @@ table.params td:nth-child(2) { white-space: nowrap; }
   .lab { padding: 12px; border-radius: 16px; }
   .lab-topbar { align-items: stretch; flex-direction: column; gap: 14px; padding: 7px 4px 14px; }
   form input { width: 100%; flex: 1; }
+  .repo-control input { width: 100%; flex: 1; }
   .how-section { padding: 88px 0; }
   .how-notes { grid-template-columns: 1fr; }
   .steps { grid-template-columns: 1fr; }

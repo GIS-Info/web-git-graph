@@ -44,8 +44,10 @@ backend—without coupling the renderer to a framework or server language.
 ### Live demo
 
 Open the [interactive GitHub Pages demo](https://gis-info.github.io/web-git-graph/).
-It includes fixture data, public GitHub repository loading, commit details,
-comparison, search, bilingual content, and light/dark themes.
+It includes an offline sample of [react/react](https://github.com/react/react)
+history, optional public GitHub repository loading (paste a personal access
+token when the unauthenticated rate limit is hit), commit details, comparison,
+search, bilingual content, and light/dark themes.
 
 ### Quick start
 
@@ -180,8 +182,9 @@ Web Git Graph 将桌面 Git 历史工具中高密度、高效率的交互方式�
 ### 在线演示
 
 打开 [GitHub Pages 在线演示](https://gis-info.github.io/web-git-graph/)。
-页面内置示例数据、公开 GitHub 仓库加载、提交详情、比较、搜索、中英文切换，
-以及深色/浅色主题。
+页面内置 [react/react](https://github.com/react/react) 的离线示例历史、可选的公开
+GitHub 仓库加载（未认证触达速率限制时可粘贴 personal access token）、提交详情、
+比较、搜索、中英文切换，以及深色/浅色主题。
 
 ### 快速开始
 

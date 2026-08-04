@@ -185,15 +185,27 @@
             <form id="repo-form">
               <label for="repository" data-i18n="demo.repoLabel">GitHub repository</label>
               <div class="repo-control">
-                <input id="repository" name="repository" value="GIS-Info/web-git-graph" />
+                <input id="repository" name="repository" value="react/react" spellcheck="false" autocomplete="off" />
                 <button type="submit" data-i18n="demo.load">Load</button>
               </div>
+              <label class="token-field" for="github-token">
+                <span data-i18n="demo.tokenLabel">GitHub token (optional)</span>
+                <input
+                  id="github-token"
+                  name="token"
+                  type="password"
+                  spellcheck="false"
+                  autocomplete="off"
+                  data-i18n-placeholder="demo.tokenPlaceholder"
+                  placeholder="Paste a token if GitHub rate-limits you — stored only in this tab"
+                />
+              </label>
             </form>
           </div>
           <div class="status-line">
             <span class="status-mark" aria-hidden="true"></span>
             <p id="status" data-i18n="demo.statusFixture">
-              Showing fixture data. Enter a public repository to load live history.
+              Showing sample history from react/react (offline snapshot). Load a public repository for live data.
             </p>
           </div>
           <web-git-graph id="graph" theme="light"></web-git-graph>

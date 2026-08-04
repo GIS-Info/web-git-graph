@@ -7,15 +7,14 @@
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "verbatimModuleSyntax": true,
-    "baseUrl": ".",
     "paths": {
-      "@web-git-graph/protocol": ["packages/protocol/src/index.ts"],
-      "@web-git-graph/protocol/http": ["packages/protocol/src/http.ts"],
-      "@web-git-graph/web": ["packages/web/src/index.ts"],
-      "@web-git-graph/web/register": ["packages/web/src/register.ts"],
-      "@web-git-graph/web/providers/github": ["packages/web/src/providers/github.ts"],
-      "@web-git-graph/web/providers/http": ["packages/web/src/providers/http.ts"],
-      "@web-git-graph/node": ["packages/node/src/index.ts"]
+      "@web-git-graph/protocol": ["./packages/protocol/src/index.ts"],
+      "@web-git-graph/protocol/http": ["./packages/protocol/src/http.ts"],
+      "@web-git-graph/web": ["./packages/web/src/index.ts"],
+      "@web-git-graph/web/register": ["./packages/web/src/register.ts"],
+      "@web-git-graph/web/providers/github": ["./packages/web/src/providers/github.ts"],
+      "@web-git-graph/web/providers/http": ["./packages/web/src/providers/http.ts"],
+      "@web-git-graph/node": ["./packages/node/src/index.ts"]
     }
   }
 }

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { multiLaneFixture } from "./fixtures/multi-lane";
 
 const BACKEND_DEMO = "/web-git-graph/?backend=http://127.0.0.1:4174&repository=local";
 
@@ -7,6 +8,13 @@ const BACKEND_DEMO = "/web-git-graph/?backend=http://127.0.0.1:4174&repository=l
 async function gotoDemo(page: Page, url = "/web-git-graph/"): Promise<void> {
   await page.goto(url);
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
+}
+
+async function loadMultiLaneFixture(page: Page): Promise<void> {
+  await gotoDemo(page);
+  await page.locator("web-git-graph").evaluate((element, data) => {
+    (element as HTMLElement & { data: unknown }).data = data;
+  }, multiLaneFixture);
 }
 
 test("renders the graph and opens commit details", async ({ page }) => {
@@ -20,8 +28,9 @@ test("renders the graph and opens commit details", async ({ page }) => {
   await firstRow.click();
   const details = graph.locator(".inline-details");
   await expect(details).toBeVisible();
-  await expect(details.locator(".meta")).toContainText("a91de840");
-  await expect(details.locator(".commit-body")).toContainText("Merge release");
+  const oid = (await firstRow.locator(".oid").textContent())?.trim() ?? "";
+  await expect(details.locator(".meta")).toContainText(oid);
+  await expect(details.locator(".commit-body")).not.toHaveText("");
   await expect(details.locator(".details-files")).toContainText("No file changes");
   await page.waitForTimeout(150);
 
@@ -42,15 +51,20 @@ test("highlights search matches without collapsing the graph", async ({ page }) 
   await gotoDemo(page);
   const graph = page.locator("web-git-graph");
   const rowCount = await graph.locator(".row").count();
+  const firstMessage = (await graph.locator(".row .message").first().textContent()) ?? "";
+  const needle = firstMessage.match(/[A-Za-z]{6,}/)?.[0] ?? firstMessage.trim().slice(0, 8);
+  expect(needle.length).toBeGreaterThan(0);
 
   await graph.locator(".search").fill("octopus-does-not-exist");
   await expect(graph.locator(".search-count")).toHaveText("0/0");
   // The DAG stays intact while searching: no rows are filtered away.
   await expect(graph.locator(".row")).toHaveCount(rowCount);
 
-  await graph.locator(".search").fill("provider");
-  await expect(graph.locator(".search-count")).toHaveText("1/1");
-  await expect(graph.locator(".row.match")).toHaveCount(1);
+  // Search a token from the first visible commit so the match jump does not
+  // resize the virtualized window and flake the row-count assertion.
+  await graph.locator(".search").fill(needle);
+  await expect(graph.locator(".search-count")).toHaveText(/^[1-9]\d*\/[1-9]\d*$/);
+  await expect(graph.locator(".row.match").first()).toBeVisible();
   await expect(graph.locator(".row.match-current")).toHaveCount(1);
   await expect(graph.locator(".row")).toHaveCount(rowCount);
 
@@ -65,14 +79,16 @@ test("highlights search matches without collapsing the graph", async ({ page }) 
 test("search keeps focus and matches while typing key by key", async ({ page }) => {
   await gotoDemo(page);
   const graph = page.locator("web-git-graph");
+  const firstMessage = (await graph.locator(".row .message").first().textContent()) ?? "";
+  const needle = firstMessage.match(/[A-Za-z]{6,}/)?.[0] ?? firstMessage.trim().slice(0, 8);
   const search = graph.locator(".search");
   await search.click();
-  await page.keyboard.type("provider", { delay: 40 });
+  await page.keyboard.type(needle, { delay: 40 });
   // Every keystroke re-renders match state; the input must survive all of
   // them without being rebuilt (which would drop focus and swallow keys).
-  await expect(search).toHaveValue("provider");
+  await expect(search).toHaveValue(needle);
   await expect(search).toBeFocused();
-  await expect(graph.locator(".search-count")).toHaveText("1/1");
+  await expect(graph.locator(".search-count")).toHaveText(/^[1-9]\d*\/[1-9]\d*$/);
 });
 
 test("renders compact slashed dates and honours the column and date settings", async ({ page }) => {
@@ -94,7 +110,7 @@ test("renders compact slashed dates and honours the column and date settings", a
 });
 
 test("emphasises the checked-out branch with a solid chip", async ({ page }) => {
-  await gotoDemo(page);
+  await loadMultiLaneFixture(page);
   const graph = page.locator("web-git-graph");
   const alpha = async (selector: string): Promise<number> => {
     const colour = await graph.locator(selector).first().evaluate(
@@ -351,7 +367,7 @@ test("keeps graph lanes visible while a commit row is hovered", async ({ page })
 });
 
 test("keeps lane curves compact while commit details are expanded", async ({ page }) => {
-  await gotoDemo(page);
+  await loadMultiLaneFixture(page);
   const graph = page.locator("web-git-graph");
 
   // The bend of a lane transition must always complete within one row height.
@@ -400,7 +416,7 @@ test("connects the demo to the local Node backend through HTTP", async ({ page }
 
   await expect(page.locator("#status")).toContainText("127.0.0.1:4174");
   // The exact repository name proves the backend page replaced the demo
-  // fixture ("web-git-graph / protocol-lab") instead of silently failing.
+  // snapshot ("react/react") instead of silently failing.
   await expect(graph.locator(".repository-name")).toHaveText("web-git-graph");
   await expect(graph.locator(".oid").first()).not.toHaveText("");
 

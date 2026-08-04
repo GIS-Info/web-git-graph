@@ -44,6 +44,9 @@ export function initPage(config: PageConfig): Page {
       if (element.id === "status") return;
       element.textContent = t(element.dataset.i18n!);
     });
+    document.querySelectorAll<HTMLElement>("[data-i18n-placeholder]").forEach((element) => {
+      element.setAttribute("placeholder", t(element.dataset.i18nPlaceholder!));
+    });
     document.querySelectorAll<HTMLElement>("[data-i18n-aria]").forEach((element) => {
       element.setAttribute("aria-label", t(element.dataset.i18nAria!));
     });

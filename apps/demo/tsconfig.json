@@ -6,7 +6,7 @@
     "strict": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
-    "baseUrl": ".",
+    "resolveJsonModule": true,
     "paths": {
       "@web-git-graph/protocol": ["../../packages/protocol/src/index.ts"],
       "@web-git-graph/protocol/http": ["../../packages/protocol/src/http.ts"],

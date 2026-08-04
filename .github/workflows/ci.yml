@@ -17,13 +17,13 @@ jobs:
           # The e2e suite drives the Node backend against this repository's own
           # history, so a shallow clone leaves it with a single commit to render.
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.28.1
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: pnpm
+      - name: Enable pnpm via Corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.1 --activate
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:boundaries
       - run: pnpm typecheck

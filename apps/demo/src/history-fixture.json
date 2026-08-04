@@ -1,0 +1,1380 @@
+{
+  "commits": [
+    {
+      "oid": "7dfc7ccd12d0294debc69b9b9b4e9dd1fd42e08a",
+      "parents": [
+        "c7cab6664db1b18c78044dde5317722acbeac1cd"
+      ],
+      "message": "[DevTools] Remove the dead Timeline profiler code (#37187)\n\n## Summary\n\nWith the tab gone, everything that fed it is unreachable. This deletes\n`packages/react-devtools-timeline` (74 files) and the backend that\nproduced its data, `backend/profilingHooks.js`, along with\n`SidebarEventInfo`, the two timeline test suites, the `timelineData`\nsnapshot serializer, and the scheduling-profiler fixture.\n\nIt also unwires the plumbing that only existed to carry timeline data:\n`recordTimeline` across the reload-and-profile path (hook →\nsessionStorage → agent → renderer), `timelineData` on\n`ProfilingDataBackend` and the profile export, the `supportsTimeline`\nStore config, the `rootSupportsTimelineProfiling` capability, the\n`DevToolsProfilingHooks` type and the `ReactRenderer` members DevTools\nused to inject it, the 40 `--color-timeline-*` theme variables in both\nthemes plus the orphaned `--color-scroll-caret`, and `hook.js`'s\ninternal-module-range tracking with its `react-devtools-facade` stubs.\n\n`yarn.lock` is regenerated: 52 distinct package-versions and 68\nrequirement specs drop out, with no additions and no version changes to\nanything that remains.\n\n## Deliberate non-changes\n\n- **`PROFILER_EXPORT_VERSION` stays at 5.**\n`prepareProfilingDataFrontendFromExport` compares versions with `!==`,\nso a bump would reject every profile anyone has already saved.\n`timelineData` was an optional key, so dropping it is invisible in both\ndirections.\n- **Profiling flag bit `0b010` is retired, not reused**, and the\nconstant is replaced by a comment saying so. Shipped backends keep\nsetting it, so renumbering `PROFILING_FLAG_PERFORMANCE_TRACKS_SUPPORT`\ninto that slot would make a new frontend misread older backends as\ntracks-capable.\n- **The `displayName` properties on DevTools' cache thenables are\nkept.** They look timeline-only, but `ReactFiberThenable` reads\n`thenable.displayName` to name I/O in async debug info, which feeds the\nPerformance tracks. Only their stale comments are corrected.\n- **`react-reconciler`, `shared/ReactFeatureFlags.js` and\n`scripts/rollup` are untouched**; `enableSchedulingProfiler` is still\nlive for www and native-fb.\n\n## Follow-ups (not in this stack)\n\nThree stale comments still name the removed package:\n`scripts/rollup/wrappers.js:532` and `ReactFiberLane.js:38,125`. Left\nalone to keep this stack purely DevTools-side.\n\n## Test plan\n\n`yarn linc`, `yarn flow dom-node`, and the DevTools suite all pass on\nthis commit in isolation (40/40 suites, 582 tests).",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-08-03T15:32:51Z",
+      "committedAt": "2026-08-03T15:32:51Z",
+      "url": "https://github.com/react/react/commit/7dfc7ccd12d0294debc69b9b9b4e9dd1fd42e08a"
+    },
+    {
+      "oid": "c7cab6664db1b18c78044dde5317722acbeac1cd",
+      "parents": [
+        "0011363766afbea28f1bb76d165cbbbdee67b51f"
+      ],
+      "message": "[DevTools] Remove Timeline profiler tab, suggest React Performance tracks (#37186)\n\nCleaning up the Timeline profiler in the next commit on top of this one.\n\nIf user is debugging React 19.2+, we will show a suggestion to record a\ntrace on Performance panel. Otherwise, we will suggest to upgrade to\nReact 19.2 to unlock Performance tracks.\n\n<img width=\"751\" height=\"832\" alt=\"Screenshot 2026-08-03 at 14 57 43\"\nsrc=\"https://github.com/user-attachments/assets/153e712b-8f7c-4ec5-87f8-b01cf1180aae\"\n/>",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-08-03T15:32:51Z",
+      "committedAt": "2026-08-03T15:32:51Z",
+      "url": "https://github.com/react/react/commit/c7cab6664db1b18c78044dde5317722acbeac1cd"
+    },
+    {
+      "oid": "0011363766afbea28f1bb76d165cbbbdee67b51f",
+      "parents": [
+        "35a06228b34428a14673d203bc9fcf17bc23fb00"
+      ],
+      "message": "[DevTools] Redesign the Profiler empty states around a primary action (#37185)\n\n| Before | After |\n|--------|--------|\n| <img width=\"752\" height=\"835\" alt=\"before\"\nsrc=\"https://github.com/user-attachments/assets/225d131c-a09c-44dd-ae79-0d76a8874d70\"\n/> | <img width=\"751\" height=\"832\" alt=\"after\"\nsrc=\"https://github.com/user-attachments/assets/8547a921-adc4-4abb-a40f-5ae74c1287b2\"\n/> |",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-08-03T15:32:50Z",
+      "committedAt": "2026-08-03T15:32:50Z",
+      "url": "https://github.com/react/react/commit/0011363766afbea28f1bb76d165cbbbdee67b51f"
+    },
+    {
+      "oid": "35a06228b34428a14673d203bc9fcf17bc23fb00",
+      "parents": [
+        "3a717e42438afac81020cdec297dadb5613a4304"
+      ],
+      "message": "[DevTools] Deduplicate error reporting (#37137)\n\nPreviously, every instance of ErrorBoundary, which wraps every custom\npanel in extension, was subscribing to errors from the Store. This would\nreport the same error for every mounted panel.\n\nErrorBoundary now only intercepts render-time errors, and Store errors\nare captured and reported in an external subscription at the place where\nStore is created.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-08-03T15:32:32Z",
+      "committedAt": "2026-08-03T15:32:32Z",
+      "url": "https://github.com/react/react/commit/35a06228b34428a14673d203bc9fcf17bc23fb00"
+    },
+    {
+      "oid": "3a717e42438afac81020cdec297dadb5613a4304",
+      "parents": [
+        "9b5b4d51e5be870d396a9568701259e5eb053668"
+      ],
+      "message": "[Fiber] Collect Host Singleton children of Fragments (#37063)\n\n\nCo-authored-by: Claude Fable 5 <noreply@anthropic.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Sebastian \"Sebbie\" Silbermann",
+        "email": "sebastian.silbermann@vercel.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/12292047?v=4"
+      },
+      "authoredAt": "2026-07-31T19:20:20Z",
+      "committedAt": "2026-07-31T19:20:20Z",
+      "url": "https://github.com/react/react/commit/3a717e42438afac81020cdec297dadb5613a4304"
+    },
+    {
+      "oid": "9b5b4d51e5be870d396a9568701259e5eb053668",
+      "parents": [
+        "cbb046ab92b66dfc4ad1e1ea30d4b8beae6f2c24"
+      ],
+      "message": "[Flight] Add 'pending_weak' to Flight thenable protocol (#37154)\n\nAdded behind a new experimental flag, `enableFlightWeakThenables`.\n\nAdds a new thenable status to the Flight protocol: `'pending_weak'`.\nUnlike a regular pending thenable, a weak thenable does not block the\nstream from closing. If it settles while the stream is still open, its\nvalue is emitted like a normal pending thenable. Otherwise its reference\nis left unfulfilled and on the client it stays forever pending, without\nerroring, even when the connection closes. It's up to the client to\nhandle the unresolved promise in an appropriate way.\n\nThe motivating use case is being able to encode metadata about a Flight\nstream into the response itself. For example, a framework might want to\ntrack whether a page varies by search params. It could represent this in\nthe response as a `Promise<boolean>` that resolves to `true` as soon as\nthe component being rendered in the stream accesses search params. If\nthe thenable never resolves by the time the stream closes, then the\nclient knows that no search params were ever accessed.\n\nIn the future we could add a higher-level API for encoding this kind of\ninformation. For now, we intentionally start with the low-level\nprimitive so frameworks can experiment in userspace without adding\nsignificantly to React's surface area.\n\nInternally, Flight already uses its own private thenable statuses, like\n`'resolved_model'`, and the protocol is designed to treat any status\nbesides `'fulfilled'` and `'rejected'` as equivalent to `'pending'`, so\n`'pending_weak'` slots into the existing machinery. On the wire, a weak\nreference is encoded as `$w<id>`, next to `$@<id>` for regular promises,\nso the client knows its row may intentionally never arrive. On the\nclient, a weak reference behaves like any other pending promise until\nthe response closes; then, instead of erroring, it is left forever\npending.",
+      "kind": "commit",
+      "author": {
+        "name": "Andrew Clark",
+        "email": "git@andrewclark.io",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/3624098?v=4"
+      },
+      "authoredAt": "2026-07-31T17:22:30Z",
+      "committedAt": "2026-07-31T17:22:30Z",
+      "url": "https://github.com/react/react/commit/9b5b4d51e5be870d396a9568701259e5eb053668"
+    },
+    {
+      "oid": "cbb046ab92b66dfc4ad1e1ea30d4b8beae6f2c24",
+      "parents": [
+        "0f42eac25e44090837e92304ac08d8d430ceef0a"
+      ],
+      "message": "[Fiber] Warn for Conditional Use of use() Based on Cache (#37104)\n\nThis is a cherry-pick of https://github.com/react/react/pull/34030, with\na feature flag gating and a test coverage.\n\nThe flag is disabled by default and dynamic for FB builds to understand\nfirst how noisy this warning can be.\n\n---\n\nSee https://github.com/react/react/pull/34030 for more context on the\nchange.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-31T14:24:10Z",
+      "committedAt": "2026-07-31T14:24:10Z",
+      "url": "https://github.com/react/react/commit/cbb046ab92b66dfc4ad1e1ea30d4b8beae6f2c24"
+    },
+    {
+      "oid": "0f42eac25e44090837e92304ac08d8d430ceef0a",
+      "parents": [
+        "7acf00566e35c40817342654438a5757c6c41d0e"
+      ],
+      "message": "[DevTools] Reset extension backend on pagehide (#37155)\n\nI have noticed inconsistency errors being thrown during browser\nnavigations that involve entries from BFCache. The main argument on why\nthis could be affecting React DevTools backend lifecycle is the fact\nthat Chrome kills the port manually, while freezing and preserving the\nJavaScript heap -\nhttps://developer.chrome.com/blog/bfcache-extension-messaging-changes.\n\nBasically, we could end up in a permutation, where port is dead, but\nBackend / Agent are alive. Such setup is not expected by React DevTools.\n\nOn `main`:\n\n\nhttps://github.com/user-attachments/assets/9ca10286-b545-4384-bd6b-33d9a4ddde3d\n\n\nWith these changes:\n\n\nhttps://github.com/user-attachments/assets/c4639c4a-6385-4248-a5c4-a39895d7fff6\n\n\nI couldn't come up with a good test for this yet, but I will try to add\nsomething. I am not convinced yet that emulating `pagehide` / `pageshow`\nwould be sufficient to reproduce browser environment during BFCache\nentries.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-30T20:17:49Z",
+      "committedAt": "2026-07-30T20:17:49Z",
+      "url": "https://github.com/react/react/commit/0f42eac25e44090837e92304ac08d8d430ceef0a"
+    },
+    {
+      "oid": "7acf00566e35c40817342654438a5757c6c41d0e",
+      "parents": [
+        "c56a44903f91d41dce51107f34491daabdcb6a70"
+      ],
+      "message": "[DevTools] Create extension panels before React detection (#37151)\n\nThe main reason why I am doing this is because there is no API in the\nbrowser to \"unmount\" the created panel.\n\nIf you have React DevTools installed, we should always create a panel,\nbut the contents of the panel should be dynamically populated based on\nthe target. If it is not a React app, we will continue showing the stub\nmessage.\n\nPreviously, we wouldn't mount a panel at all, and historically we've\nreceived a few reports of this as a bug.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-30T20:17:48Z",
+      "committedAt": "2026-07-30T20:17:48Z",
+      "url": "https://github.com/react/react/commit/7acf00566e35c40817342654438a5757c6c41d0e"
+    },
+    {
+      "oid": "c56a44903f91d41dce51107f34491daabdcb6a70",
+      "parents": [
+        "15f7cd693e102c568df501eeeb9684f507e0ec0b"
+      ],
+      "message": "[DevTools] Remove FlowFixMe from extension lifecycle (#37152)\n\nI've been triaging some lifecycle races during sessions with BFCache\ninvolved and noticed a few type errors in real world scenario. These\nobjects were not properly typed, fixing in this PR.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-30T20:17:48Z",
+      "committedAt": "2026-07-30T20:17:48Z",
+      "url": "https://github.com/react/react/commit/c56a44903f91d41dce51107f34491daabdcb6a70"
+    },
+    {
+      "oid": "15f7cd693e102c568df501eeeb9684f507e0ec0b",
+      "parents": [
+        "6cb4322d65f4c68daa183df24b5f81668cedab14"
+      ],
+      "message": "Add ReactDOM `browser()` API (#37143)\n\n## Summary\n\nAdds a new API to `react-dom` called `browser()`.\n\n`browser()` returns a \"usable\" that will error during SSR and resolve\nduring rendering in the browser. The purpose is to allow you to express\nthe idea that a component should suspend on the server but not in the\nbrowser. The method is not available inside a `react-server`\nenvironment. This is a client only feature.\n\nThis is a `react-dom` API because the concept of browser doesn't apply\ngenerally to React itself.\n\nThis codifies a pattern that is common in some apps where you error\nduring SSR to prevent rendering some component on the server and you end\nup suppressing the error that is reported in the client to avoid this\nappearing like a problem rather than intended behavior. Unfortunately\nthis is not an option for many because hacking around to prevent errors\nfrom being logged is not practical for many\n\nBy making this a React API we enabled this common pattern in any React\nusing library or application\n\n```tsx\nimport {use, Suspense} from 'react';\nimport {browser} from 'react-dom';\n\nfunction BrowserOnly() {\n  use(browser());\n  return <ClientContent />;\n}\n\nfunction App() {\n  return (\n    <Suspense fallback={<Fallback />}>\n      <BrowserOnly />\n    </Suspense>\n  );\n}\n```\n\nIt is an error to `use(browser())` outside of a Suspense boundary\nbecause you cannot recover from the root. this restriction may be lifted\nin the future but is part of the current limitations of the API\n\n## Implementation\n\nDeferring rendering to a downstream system is modeled in React already\nas recoverable errors. The idea is that in some environments you might\nnot want to report something directly as an error because a later\nenvironment has an opportunity to recover from it without alerting the\nuser to the mishap. This concept also shows up in RSC with halted\nreferences. They can \"recover\" in a later render by eventually resolving\nto some value.\n\nTo model the idea of \"render in the browser\" we are really just modeling\nan intentional recoverable error. However since you don't want to treat\nthis kind of error as exceptional we intentionally suppress logging.\nAdditionally since aborting a server render is semantically equivalent\nto \"erroring\" in every unfinished task we also support aborting with a\n`browser()` so you can describe ending a stream with intentional holes\nthat won't be logged as errors in the browser when hydrating.\n\nOne interesting thing we do with this particular API is it returns an\nobject that is isomorphic and it's the `use` or `abort` function that\nhandles differing behaviors. This means you can create these objects in\nmodule scope and use them even in complex scenarios like server\nrendering inside the browser while React is rendering.\n\nThis implementation is flagged so we can disable the feature quickly if\nwe decide to not ship this in a stable. It is going into React\nunprefixed for now because the semantics are clear and the utility is\nwidely known.\n\n## Alternatives\n\nWe considered `useBrowser()` or a similar hook however this means you\nmust call it unconditionally. There are use cases where props might\ninfluence whether you want to allow something to render during SSR or\nnot. for instance you might have a data fetching library that accepts\ninitial data on the server but if it doesn't receive initial data it\nfalls back to browser only rendering.\n\nAnother consideration is a throwing function like just calling\n`browser()` would throw if called during an SSR render. The main reason\nwe do not think this is a good idea is because you can then call this\narbitrarily deep and the throw can be caught and might be suppressed\naccidentally. By making it a usable it can only be done in hooks or\nhook-like contexts.",
+      "kind": "commit",
+      "author": {
+        "name": "Josh Story",
+        "email": "gnoff@storyposted.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/2716369?v=4"
+      },
+      "authoredAt": "2026-07-30T20:15:13Z",
+      "committedAt": "2026-07-30T20:15:13Z",
+      "url": "https://github.com/react/react/commit/15f7cd693e102c568df501eeeb9684f507e0ec0b"
+    },
+    {
+      "oid": "6cb4322d65f4c68daa183df24b5f81668cedab14",
+      "parents": [
+        "1724e9ce0aa1db99bcbe2633304b6a0fee2e4e1e"
+      ],
+      "message": "[Flight] Port ReplyServer traversal guards to FlightClient (#37144)\n\nAdditional defense-in-depth in case consumers pass untrusted input into\nFlight Client.\n\nFlight Client generally assumes trusted input.\n\nWe'll reserve these kind of fixes for Flight Client in case the\nuntrusted input leads to catastrophic vulnerabilities e.g. prototype\npollutions that can be used for remote code executions.",
+      "kind": "commit",
+      "author": {
+        "name": "Sebastian \"Sebbie\" Silbermann",
+        "email": "sebastian.silbermann@vercel.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/12292047?v=4"
+      },
+      "authoredAt": "2026-07-29T22:17:33Z",
+      "committedAt": "2026-07-29T22:17:33Z",
+      "url": "https://github.com/react/react/commit/6cb4322d65f4c68daa183df24b5f81668cedab14"
+    },
+    {
+      "oid": "1724e9ce0aa1db99bcbe2633304b6a0fee2e4e1e",
+      "parents": [
+        "9a81195bed0ded96e10a13f753dce05bee8cc97b"
+      ],
+      "message": "[DOM] Blur focused descendants in Fragment refs (#37125)\n\n## Summary\n\n`FragmentInstance.blur()` only matched the active element against the\nfirst level of host children. If the focused element was nested inside\none of those children, `focus()` could reach it but `blur()` would leave\nit focused.\n\nThis treats an active element contained by a Fragment host child as part\nof the Fragment and blurs the active element itself. It also adds\nregression coverage for a nested input.\n\nFixes #37124.\n\n## How did you test this change?\n\n- `yarn test ReactDOMFragmentRefs-test --runInBand` (65 tests passed)\n- `yarn test --prod ReactDOMFragmentRefs-test --runInBand` (65 tests\npassed)\n- `yarn prettier`\n- `yarn linc`\n- `yarn flow dom-node`",
+      "kind": "commit",
+      "author": {
+        "name": "Minh Vu",
+        "email": "vuhoangminh97@gmail.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/38443830?v=4"
+      },
+      "authoredAt": "2026-07-29T16:21:37Z",
+      "committedAt": "2026-07-29T16:21:37Z",
+      "url": "https://github.com/react/react/commit/1724e9ce0aa1db99bcbe2633304b6a0fee2e4e1e"
+    },
+    {
+      "oid": "9a81195bed0ded96e10a13f753dce05bee8cc97b",
+      "parents": [
+        "96fcba90138e9f1a73ee1cc4f79a653ec12fc3a9"
+      ],
+      "message": "[Fiber] Fix hang when updating a dehydrated boundary inside a hidden tree (#37135)\n\nCloses https://github.com/vercel/next.js/issues/95848.\n\nFixes a hang: if an update changes what's inside a server-rendered\nSuspense or Activity boundary before that boundary has hydrated, and the\naffected content is hidden, React stops committing. The new content\nrenders once its data arrives, but the render is discarded every time,\nnothing is scheduled, and nothing ever pings — the update never lands\nand the app appears frozen.\n\n\"Hidden\" means either of two things, and there's a test for each:\n\n- the update itself hides a dehydrated `<Activity>` (while mounting new\nsibling content that suspends), or\n- the dehydrated boundary is inside the primary tree of a parent\nboundary that just suspended and is showing its fallback.\n\nThis is how we found it in practice.\n\nWith https://github.com/vercel/next.js/pull/95682, pressing Back before\nhydration finishes made the router replay the missed navigation from its\nfirst effect. This worked fine outside of Cache Components, but in Cache\nComponents mode (which turns on Activity), the old page's Activity\n(still dehydrated) gets hidden, the new page's content suspends inside\nthe layout's Suspense boundary, and after the data arrives the page\nstays blank forever.\n\nAs a result, https://github.com/vercel/next.js/pull/95682 got reverted.\nIf we fix this, we can unrevert it.\n\n## Why it happens\n\nWhen an update changes a dehydrated boundary, we schedule a render at a\nhigher priority to hydrate it before the update applies. If we already\ntried that, we give up and client render, but mark the render as\nsuspended so it doesn't commit while the hydration attempt might still\nfinish first.\n\nBoth steps assume the attempt can actually run. Inside a hidden tree it\ncan't, because updates in hidden trees are deferred until the tree is\nrevealed. The scheduled attempt never runs but still consumes the retry\nlane, which sends every later render into the give-up path — and the\ngive-up path keeps discarding finished renders, waiting for a hydration\nattempt that isn't in flight. Once the last piece of data resolves\nthere's nothing left to ping us awake. The root ends up with\n`pendingLanes === suspendedLanes`, `pingedLanes` empty, and no callback\nscheduled.\n\nThe update doesn't need to be sync or discrete: a plain setState from an\neffect is enough. Wrapping the same update in `startTransition` avoids\nit, which is probably why this went unnoticed.\n\n## The fix\n\nIf the boundary is inside a hidden tree (`isCurrentTreeHidden()`), skip\nthe hydration attempt and client render right away. There's nothing\nvisible to protect: replacing hidden server HTML doesn't show, and the\nreplacement children render when the tree is revealed.\n\nOne behavior note: this discards the hidden server HTML instead of\npreserving it for later hydration on reveal, same as the existing\ngive-up path. Keeping it dehydrated and hydrating at reveal would be a\nnicer follow-up, but needs commit-phase support that doesn't exist\ntoday.\n\n## How did you test this change?\n\nThe first commit adds failing tests for both boundary types; the fix\nmakes them pass. `startTransition` variants of the same scenarios are\nincluded as passing controls. Ran the Activity, partial/selective\nhydration, Fizz, Suspense, and Offscreen suites in both release\nchannels.",
+      "kind": "commit",
+      "author": {
+        "name": "dan",
+        "email": "dan.abramov@me.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/810438?v=4"
+      },
+      "authoredAt": "2026-07-28T22:18:44Z",
+      "committedAt": "2026-07-28T22:18:44Z",
+      "url": "https://github.com/react/react/commit/9a81195bed0ded96e10a13f753dce05bee8cc97b"
+    },
+    {
+      "oid": "96fcba90138e9f1a73ee1cc4f79a653ec12fc3a9",
+      "parents": [
+        "9ceb1e7d9e20bd0302cf6ab31b038c5ec673178d"
+      ],
+      "message": "[RN] Update ReactPrivate and InitializeCore imports (0.87 Strict API) (#36986)\n\n## Summary\n\nMigrate internal `Libraries/` import subpaths from `react-native` to the\nincoming dedicated entry points in React Native 0.87.\n\n**Motivation**\n\nSee [**RFC0894: Removing deep imports from\nreact-native**](https://github.com/react-native-community/discussions-and-proposals/pull/894)\n\n**Changes**\n\nThe `react-private-interface` entry point has been created explicitly\nfor the private contract between React ↔ React Native, and is 1:1 with\nthe previous `ReactNativePrivateInterface` module.\n\nBoth of the below `Libraries/` paths still exist, but are deprecated —\nthis is a lagging migration that will enable cleanup in a future RN\nversion.\n\n- `react-native/Libraries/Core/InitializeCore` →\n`react-native/setup-env`\n[react/react-native#57475](https://github.com/react/react-native/pull/57475)\n- `react-native/Libraries/ReactPrivate/ReactNativePrivateInterface` →\n`react-native/react-private-interface`\n[react/react-native#57495](https://github.com/react/react-native/pull/57495)\n\n## Test Plan\n\nFlow",
+      "kind": "commit",
+      "author": {
+        "name": "Alex Hunt",
+        "email": "hello@alexhunt.dev",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/2547783?v=4"
+      },
+      "authoredAt": "2026-07-28T15:45:37Z",
+      "committedAt": "2026-07-28T15:45:37Z",
+      "url": "https://github.com/react/react/commit/96fcba90138e9f1a73ee1cc4f79a653ec12fc3a9"
+    },
+    {
+      "oid": "9ceb1e7d9e20bd0302cf6ab31b038c5ec673178d",
+      "parents": [
+        "756fdd476e82b0cad3776d7de083250b20f86524"
+      ],
+      "message": "[Flight] Define Flight chunk `.then` with `Object.defineProperty` (#37109)\n\n[Secure Ecmascript](https://github.com/tc39/proposal-ses) would freeze\nthe prototype of intrinsics. Since `ReactPromise` inherits the prototype\nfrom `Promise`, it also copies over the writable definition.\n\nUsing `defineProperty` on an inherited property is compatible with SES\nthough. That's also closer to how classes are specced in JS.\n\n\n---------\n\nCo-authored-by: Claude Fable 5 <noreply@anthropic.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Sebastian \"Sebbie\" Silbermann",
+        "email": "sebastian.silbermann@vercel.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/12292047?v=4"
+      },
+      "authoredAt": "2026-07-27T19:30:19Z",
+      "committedAt": "2026-07-27T19:30:19Z",
+      "url": "https://github.com/react/react/commit/9ceb1e7d9e20bd0302cf6ab31b038c5ec673178d"
+    },
+    {
+      "oid": "756fdd476e82b0cad3776d7de083250b20f86524",
+      "parents": [
+        "dcd4ec28a13268f758facecde6eea93e0e791388"
+      ],
+      "message": "[Fiber] Don't reaquire HostSingletons during dev effect validation (#37113)\n\nStacked on #37112\n\nIn dev effects are validated using a double-invoke technique. To do this\nthe effects are destroyed and recreated during a validation traversal.\nHowever this same disappear and reappear path is used when Offscreen\nFibers go hidden and HostSingletons have unique behavior when going\nhidden. So now that the double invoke effects process happens during\nhydration it is more common to have your Singletons be released and\nacquired during this validation phase which is observable most notably\nby having extra attributes removed from them. The prior commits in this\nstack deal with preserving non-react owned attributes on release however\nit is semantically incorrect to release and acquire the singleton during\nthis validation because it isn't really an effect, it simply lives in\nthis traversal to avoid having to do another traversal during the\ncommit.\n\nThis change adds a bit of info to the release and acquire path to only\nconditionally perform the necessary reacquire flow if we are not in the\nvalidation phase.",
+      "kind": "commit",
+      "author": {
+        "name": "Josh Story",
+        "email": "gnoff@storyposted.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/2716369?v=4"
+      },
+      "authoredAt": "2026-07-27T13:15:00Z",
+      "committedAt": "2026-07-27T13:15:00Z",
+      "url": "https://github.com/react/react/commit/756fdd476e82b0cad3776d7de083250b20f86524"
+    },
+    {
+      "oid": "dcd4ec28a13268f758facecde6eea93e0e791388",
+      "parents": [
+        "b685b40d870b90a975da28c8d22ecf0ba910b1a1"
+      ],
+      "message": "[Bench] Add JSON output and declare missing dependency (#37127)\n\nThings I found while integrating this bench into\nhttps://github.com/vercel/next.js/pull/96234.\n\nSee code.\n\n---------\n\nCo-authored-by: Claude Fable 5 <noreply@anthropic.com>",
+      "kind": "commit",
+      "author": {
+        "name": "dan",
+        "email": "dan.abramov@me.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/810438?v=4"
+      },
+      "authoredAt": "2026-07-26T09:55:28Z",
+      "committedAt": "2026-07-26T09:55:28Z",
+      "url": "https://github.com/react/react/commit/dcd4ec28a13268f758facecde6eea93e0e791388"
+    },
+    {
+      "oid": "b685b40d870b90a975da28c8d22ecf0ba910b1a1",
+      "parents": [
+        "28cd4bb08f1b66808bede284fca978cc9b065154"
+      ],
+      "message": "[Fiber] only remove properties from singletons on release (#37112)\n\nRemoving attributes does not actually reset all property state on the\nsingleton instance. It also has the side effect of wiping any 3rd party\nset attributes and properties that 3rd party scripts and extensions.\n\nReimplements the singleton release to clear properties on the instance\nbased on the last committed props for the singleton fiber.\n\nNotably there is an unfixed path with preamble contribution markers that\nstill just clears based on attributes which covers SSR'd attributes that\nneed to be wiped before client recovery on hydration can continue. There\nare gated failing tests for this as a TODO.",
+      "kind": "commit",
+      "author": {
+        "name": "Josh Story",
+        "email": "gnoff@storyposted.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/2716369?v=4"
+      },
+      "authoredAt": "2026-07-24T21:38:07Z",
+      "committedAt": "2026-07-24T21:38:07Z",
+      "url": "https://github.com/react/react/commit/b685b40d870b90a975da28c8d22ecf0ba910b1a1"
+    },
+    {
+      "oid": "28cd4bb08f1b66808bede284fca978cc9b065154",
+      "parents": [
+        "d87711f8d0a45e6950fef15183ad6f9ec827b8b0"
+      ],
+      "message": "[DevTools] Buffer Bridge messages during extension reconnects (#37075)\n\nBuffers Bridge messages during extension port reconnects and adds a\nreadiness handshake for ordered queue flushing. Includes regression\ncoverage for reconnect delivery and listener cleanup.\n\nPotential scenario could be a long user session, where Chrome kills one\nof the extension ports to save resources and then user re-connects by\nnavigating back to the DevTools UI.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-23T09:39:16Z",
+      "committedAt": "2026-07-23T09:39:16Z",
+      "url": "https://github.com/react/react/commit/28cd4bb08f1b66808bede284fca978cc9b065154"
+    },
+    {
+      "oid": "d87711f8d0a45e6950fef15183ad6f9ec827b8b0",
+      "parents": [
+        "fc08438abd8fe11f819f609fefc39f06a279ef5b"
+      ],
+      "message": "[DevTools] Validate Store operation invariants (#37050)\n\nBuilds on #37049 by validating Store operation invariants before\nmutation. Missing nodes, invalid element types, inconsistent\nparent-child relationships, and invalid reorder operations now emit and\nthrow explicit errors instead of silently continuing with corrupted\nstate.\n\nAdds a canonical-render regression test for invalid child removal.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-23T09:39:16Z",
+      "committedAt": "2026-07-23T09:39:16Z",
+      "url": "https://github.com/react/react/commit/d87711f8d0a45e6950fef15183ad6f9ec827b8b0"
+    },
+    {
+      "oid": "fc08438abd8fe11f819f609fefc39f06a279ef5b",
+      "parents": [
+        "218efce013b05907e05ee80ab5d848f990fcf6b9"
+      ],
+      "message": "[DevTools] Harden Bridge and Wall lifecycle types (#37049)\n\nBuilds on #37048 by replacing `any`-based Bridge and Wall boundaries\nwith typed `mixed` values and explicit runtime validation. Invalid\nmessages and post-shutdown operations now throw, while shutdown reliably\nflushes queued messages even if cleanup fails.\n\nStrengthens the DevTools Bridge and Wall contracts:\n- Models event dictionaries as event-to-payload maps, using `void` for\nevents without payloads.\n- Types `send(event, payload?)` directly, eliminating runtime\npayload-arity handling.\n- Replaces broad `any` transport types with `mixed` and boundary\nvalidation.\n- Throws on invalid lifecycle usage instead of warning or silently\nreturning.\n- Ensures shutdown flushes queued messages even when Wall cleanup fails.\n  - Updates Wall implementations and adds Bridge lifecycle coverage.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-23T09:39:15Z",
+      "committedAt": "2026-07-23T09:39:15Z",
+      "url": "https://github.com/react/react/commit/fc08438abd8fe11f819f609fefc39f06a279ef5b"
+    },
+    {
+      "oid": "218efce013b05907e05ee80ab5d848f990fcf6b9",
+      "parents": [
+        "8d30cc968b6715b4d2aa8b5aca1503b5e2854c6d"
+      ],
+      "message": "[DevTools] Shut down standalone Bridge on socket close (#37076)\n\nEnsures the standalone DevTools Bridge fully shuts down when its\nWebSocket closes, with re-entrancy protection. Adds tests confirming\nevent-only shutdown leaves the Bridge active while socket closure shuts\nit down.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-23T09:39:15Z",
+      "committedAt": "2026-07-23T09:39:15Z",
+      "url": "https://github.com/react/react/commit/218efce013b05907e05ee80ab5d848f990fcf6b9"
+    },
+    {
+      "oid": "8d30cc968b6715b4d2aa8b5aca1503b5e2854c6d",
+      "parents": [
+        "32b1fbad6fd1fc34ef361dcf06bcfb1ae3fed5f3"
+      ],
+      "message": "[DevTools] Type EventEmitter error handling (#37048)\n\nTightens `EventEmitter` listener types and fixes error handling so the\nfirst thrown value is preserved while subsequent errors are reported\ninstead of swallowed. Adds regression coverage for listener failures.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-23T09:39:15Z",
+      "committedAt": "2026-07-23T09:39:15Z",
+      "url": "https://github.com/react/react/commit/8d30cc968b6715b4d2aa8b5aca1503b5e2854c6d"
+    },
+    {
+      "oid": "32b1fbad6fd1fc34ef361dcf06bcfb1ae3fed5f3",
+      "parents": [
+        "711c445bccc331b3ef85a793feb8e13dcf968fc3"
+      ],
+      "message": "[react-server-dom-turbopack] Support experimental array format for chunks (#37095)\n\n\n\nTurbopack has introduced a new format for chunks (experimental):\n\n```typescript\ntype ChunkUrlOrMerged = ChunkUrl | [ChunkUrl, ChunkPath[], number[]]\n```\n\nThis will allow us to dynamically choose to merge / unmerge chunks based\non already loaded chunks. See\nhttps://github.com/vercel/next.js/pull/95261 for more context behind\nthese feature.\n\nHowever, we noticed that this breaks `prepareDestinationWithChunks()` on\nserver-side renders. The prepared chunk script tags were a stringified\nversion of this array:\n\n<img width=\"1758\" height=\"474\" alt=\"Screenshot 2026-07-22 at 9 37 06 am\"\nsrc=\"https://github.com/user-attachments/assets/fa273b44-5942-4037-b955-4338472242fe\"\n/>\n\nInstead, we should prepare the merged chunk as these SSR-d pages would\nnot have any loaded chunks tracked in memory (that happens on the\nclient).\n\nThis PR brings back this optimisation and also would remove the\nconsole-logged errors associated with them.\n\n\n---------\n\nCo-authored-by: Sebastian \"Sebbie\" Silbermann <silbermann.sebastian@gmail.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Sam Poder",
+        "email": "sam.r.poder@gmail.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/39828164?v=4"
+      },
+      "authoredAt": "2026-07-22T21:56:50Z",
+      "committedAt": "2026-07-22T21:56:50Z",
+      "url": "https://github.com/react/react/commit/32b1fbad6fd1fc34ef361dcf06bcfb1ae3fed5f3"
+    },
+    {
+      "oid": "711c445bccc331b3ef85a793feb8e13dcf968fc3",
+      "parents": [
+        "81e442eaf3fbfabd2367a0d8691ec0df13a3add0"
+      ],
+      "message": "[Flight] Limit fake JSX call site stacks to 10 frames (#37086)",
+      "kind": "commit",
+      "author": {
+        "name": "Tim Neutkens",
+        "email": "tim@timneutkens.nl",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/6324199?v=4"
+      },
+      "authoredAt": "2026-07-22T10:29:45Z",
+      "committedAt": "2026-07-22T10:29:45Z",
+      "url": "https://github.com/react/react/commit/711c445bccc331b3ef85a793feb8e13dcf968fc3"
+    },
+    {
+      "oid": "81e442eaf3fbfabd2367a0d8691ec0df13a3add0",
+      "parents": [
+        "862e275a1c150edcefab6d8ba3306192ffd6edfa"
+      ],
+      "message": "[FlightReply] Performance improvements when decoding (#37090)\n\nSecurity Patches included in 19.2.8\n\nCo-authored-by: Sebastian Sebbie Silbermann <sebastian.silbermann@vercel.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Josh Story",
+        "email": "gnoff@storyposted.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/2716369?v=4"
+      },
+      "authoredAt": "2026-07-21T16:26:12Z",
+      "committedAt": "2026-07-21T16:26:12Z",
+      "url": "https://github.com/react/react/commit/81e442eaf3fbfabd2367a0d8691ec0df13a3add0"
+    },
+    {
+      "oid": "862e275a1c150edcefab6d8ba3306192ffd6edfa",
+      "parents": [
+        "2860e00cf8780dc2d59b87f3ff28ac88b908660f"
+      ],
+      "message": "[DOM] Handle blur on Fragments below `Document` (#37062)\n\n\n\nCo-authored-by: Claude Fable 5 <noreply@anthropic.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Sebastian \"Sebbie\" Silbermann",
+        "email": "sebastian.silbermann@vercel.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/12292047?v=4"
+      },
+      "authoredAt": "2026-07-21T08:26:07Z",
+      "committedAt": "2026-07-21T08:26:07Z",
+      "url": "https://github.com/react/react/commit/862e275a1c150edcefab6d8ba3306192ffd6edfa"
+    },
+    {
+      "oid": "2860e00cf8780dc2d59b87f3ff28ac88b908660f",
+      "parents": [
+        "fa5212c188a1598cbc3a29b9abd753c83373a565"
+      ],
+      "message": "[Fiber] Detect useSyncExternalStore mutations missed while Activity tree was hidden (#36947)\n\nFixes #27670.\n\nWhen an Activity subtree is hidden, its passive effects are\ndisconnected, which unsubscribes from the store. On reveal, the effects\nare reconnected by replaying the fiber's effect list without a render,\nbut if `updateStoreInstance` was not in the effect list then the\ncomponent would be left stale. This happened both when a layout effect\nmutated the store during the reveal commit (after the subtree rendered\nbut before it resubscribed) and when the store changed while hidden and\nthe component bailed out of rendering during the reveal.\n\nWe now push the updateStoreInstance effect unconditionally but tag it\nwith HookHasEffect only under the same conditions as before, so regular\ncommits skip it when nothing changed but reconnection always triggers it\nso it can trigger a rerender if appropriate.",
+      "kind": "commit",
+      "author": {
+        "name": "Sophie Alpert",
+        "email": "git@sophiebits.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/6820?v=4"
+      },
+      "authoredAt": "2026-07-21T03:39:09Z",
+      "committedAt": "2026-07-21T03:39:09Z",
+      "url": "https://github.com/react/react/commit/2860e00cf8780dc2d59b87f3ff28ac88b908660f"
+    },
+    {
+      "oid": "fa5212c188a1598cbc3a29b9abd753c83373a565",
+      "parents": [
+        "83840902c890f0eb85decda239ef6b1b14945779"
+      ],
+      "message": "[DOM] Handle scrolling of empty Fragments below containers (#37061)\n\ne.g. `render(<Fragment ref={...}>{children}</Fragment>)` where\n`children` contain no Host Components.\n\nFor `Document` we just noop because some part of the document is always\nin view.\nFor `ShadowRoot` we use its `host`.\nAny other `DocumentFragment` without a `host` issues a warning because\nthere's nothing to scroll. This matches the existing warning when you\ncall `scrollIntoView(false)` on an empty Fragment without siblings.\n\nNotably this also applies to `<html><body /></html>` in `children`\nbecause we skip `HostSingleton` at the moment.\n\n---------\n\nCo-authored-by: Claude Fable 5 <noreply@anthropic.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Sebastian \"Sebbie\" Silbermann",
+        "email": "sebastian.silbermann@vercel.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/12292047?v=4"
+      },
+      "authoredAt": "2026-07-20T20:40:57Z",
+      "committedAt": "2026-07-20T20:40:57Z",
+      "url": "https://github.com/react/react/commit/fa5212c188a1598cbc3a29b9abd753c83373a565"
+    },
+    {
+      "oid": "83840902c890f0eb85decda239ef6b1b14945779",
+      "parents": [
+        "2ba07c6d52ba851ed896a50477d99aa7b70c7a08"
+      ],
+      "message": "[Fizz] Support nested enter/exit ViewTransition animations (#36917)\n\nAdds SSR support for nested parentEnter/parentExit View Transitions.\nFizz now emits vt-parent-enter/vt-parent-exit annotations during\nstreaming, and the client picks them up on hydration, so nested\nenter/exit animations work for Suspense reveals.",
+      "kind": "commit",
+      "author": {
+        "name": "Jack Pope",
+        "email": "jackpope1@gmail.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/8965173?v=4"
+      },
+      "authoredAt": "2026-07-19T19:59:13Z",
+      "committedAt": "2026-07-19T19:59:13Z",
+      "url": "https://github.com/react/react/commit/83840902c890f0eb85decda239ef6b1b14945779"
+    },
+    {
+      "oid": "2ba07c6d52ba851ed896a50477d99aa7b70c7a08",
+      "parents": [
+        "689a4fa44169f945a32308959f42e852fbb66017"
+      ],
+      "message": "[DOM] Scroll to text siblings of empty Fragments instead of the parent (#37060)\n\nWhen a Fragment has no children, React would consider scrolling to\nsiblings first and then to parents. However, React only considered\n`HostComponent` for the siblings.\n\nSince we already have a heuristic for scrolling to `HostText`, we can\nreuse that same heuristic.\n\n\n---------\n\nCo-authored-by: Claude Fable 5 <noreply@anthropic.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Sebastian \"Sebbie\" Silbermann",
+        "email": "sebastian.silbermann@vercel.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/12292047?v=4"
+      },
+      "authoredAt": "2026-07-19T19:41:37Z",
+      "committedAt": "2026-07-19T19:41:37Z",
+      "url": "https://github.com/react/react/commit/2ba07c6d52ba851ed896a50477d99aa7b70c7a08"
+    },
+    {
+      "oid": "689a4fa44169f945a32308959f42e852fbb66017",
+      "parents": [
+        "172742b419bad2a79ac375c0d5ee15c7ac66bff2"
+      ],
+      "message": "[Fizz] Extend stack overflow recovery to retries (#36977)\n\nRan into this test failure as part of\nhttps://github.com/react/react/pull/36917 - it seems that the added code\nwas just enough to increase stack size and fail the deep tree recovery\ntest in CI. Looking into that, there appears to be a gap here with\nretries, including a TODO test case for the scenario.\n\nFizz recovers from stack overflows in extremely deep trees by catching\nthe first overflow in the `renderNode` trampoline and spawning a\ncontinuation task. That continuation is retried via `retryRenderTask →\nretryNode`, which has no trampoline above it. So if the remaining tree\nstill doesn't fit in one fresh stack, the overflow was treated as a\nfatal error instead of recovering again.\n\nThis fix re-schedules the task when a retried render overflows but\n`task.node` advanced (proving forward progress was made). If this is a\nreal in-component overflow, `task.node` doesn't advance and we still\nfail.\n\nThe existing test used `n={1000}`, which only required one recovery\nround and didn't catch this gap in source mode. It's updated to\n`n={1200}`, which reliably requires multiple recovery rounds.",
+      "kind": "commit",
+      "author": {
+        "name": "Jack Pope",
+        "email": "jackpope1@gmail.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/8965173?v=4"
+      },
+      "authoredAt": "2026-07-19T17:13:40Z",
+      "committedAt": "2026-07-19T17:13:40Z",
+      "url": "https://github.com/react/react/commit/689a4fa44169f945a32308959f42e852fbb66017"
+    },
+    {
+      "oid": "172742b419bad2a79ac375c0d5ee15c7ac66bff2",
+      "parents": [
+        "f598ec1c29c98c368e0a576d4e0cf58831038140"
+      ],
+      "message": "[react-devtools-cdt-mcp] Make it esm-only package (#36973)\n\nThe package was CJS-only, now adding basic ESM package exports to make\nsure it works there as well.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-16T19:00:25Z",
+      "committedAt": "2026-07-16T19:00:25Z",
+      "url": "https://github.com/react/react/commit/172742b419bad2a79ac375c0d5ee15c7ac66bff2"
+    },
+    {
+      "oid": "f598ec1c29c98c368e0a576d4e0cf58831038140",
+      "parents": [
+        "113543851aa080b240368ffdabde5275fbbb95d1"
+      ],
+      "message": "[react-devtools-cdt-mcp] Add explicit register entry (#36972)\n\nWe should provide a way for consumers to handle the installation on\ntheir own, so the index entrypoint will just export the APIs and won't\nhave any side-effects.\n\nThe `/register` entrypoint (via `import\nreact-devtools-cdt-mcp/register`), will subscribe an event listener and\ninstall the tools.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-16T17:15:56Z",
+      "committedAt": "2026-07-16T17:15:56Z",
+      "url": "https://github.com/react/react/commit/f598ec1c29c98c368e0a576d4e0cf58831038140"
+    },
+    {
+      "oid": "113543851aa080b240368ffdabde5275fbbb95d1",
+      "parents": [
+        "58a6360f8545e79a0e537bdddd34206ab1042ec3"
+      ],
+      "message": "[react-devtools-cdt-mcp] Make registration idempotent (#36971)\n\nAdds support for the scenario, when the package is imported multiple\ntimes for the same target.\n\nThis will return the same (referentially) facade object with tools, and\nwill only clean up if all invocations were cleaned up.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-16T16:56:51Z",
+      "committedAt": "2026-07-16T16:56:51Z",
+      "url": "https://github.com/react/react/commit/113543851aa080b240368ffdabde5275fbbb95d1"
+    },
+    {
+      "oid": "58a6360f8545e79a0e537bdddd34206ab1042ec3",
+      "parents": [
+        "95f4603e4f8d28c4094a5bd99509af297abb1cb6"
+      ],
+      "message": "[Fiber] Fix false-positive hydration mismatch on `nonce` attributes (#37030)\n\n\n\nCo-authored-by: Suneil Nyamathi <snyamathi@gmail.com>",
+      "kind": "commit",
+      "author": {
+        "name": "MaxwellCohen",
+        "email": "to.email.max@gmail.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/12485737?v=4"
+      },
+      "authoredAt": "2026-07-16T16:54:10Z",
+      "committedAt": "2026-07-16T16:54:10Z",
+      "url": "https://github.com/react/react/commit/58a6360f8545e79a0e537bdddd34206ab1042ec3"
+    },
+    {
+      "oid": "95f4603e4f8d28c4094a5bd99509af297abb1cb6",
+      "parents": [
+        "cec5a9bd9cb55ac20320ce188d6b127d3bbedc6b"
+      ],
+      "message": "[react-devtools-cdt-mcp] Throw on import from unsupported environment (#36975)\n\nThis add an additional validation that the package is imported in a\nbrowser-like environment. If not, we should be explicit with the user\nand throw an error.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-16T13:42:37Z",
+      "committedAt": "2026-07-16T13:42:37Z",
+      "url": "https://github.com/react/react/commit/95f4603e4f8d28c4094a5bd99509af297abb1cb6"
+    },
+    {
+      "oid": "cec5a9bd9cb55ac20320ce188d6b127d3bbedc6b",
+      "parents": [
+        "0e516d326c9c3922c2584e42698b53ae4ab0d7e5"
+      ],
+      "message": "Enable enableEffectEventMutationPhase everywhere (#37039)\n\nEnable it first, will be removed later in\nhttps://github.com/react/react/pull/37013, once it gets to stable.\n\nSee https://github.com/react/react/pull/35548 for context on the gated\nchanges.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-16T13:21:39Z",
+      "committedAt": "2026-07-16T13:21:39Z",
+      "url": "https://github.com/react/react/commit/cec5a9bd9cb55ac20320ce188d6b127d3bbedc6b"
+    },
+    {
+      "oid": "0e516d326c9c3922c2584e42698b53ae4ab0d7e5",
+      "parents": [
+        "71ecaf89904a352e751ee43b00253c9927fb7183"
+      ],
+      "message": "[devtools] Document that Store consistency throws must not be worked around (#37035)\n\n\nCo-authored-by: Claude Fable 5 <noreply@anthropic.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Sebastian \"Sebbie\" Silbermann",
+        "email": "sebastian.silbermann@vercel.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/12292047?v=4"
+      },
+      "authoredAt": "2026-07-16T13:04:50Z",
+      "committedAt": "2026-07-16T13:04:50Z",
+      "url": "https://github.com/react/react/commit/0e516d326c9c3922c2584e42698b53ae4ab0d7e5"
+    },
+    {
+      "oid": "71ecaf89904a352e751ee43b00253c9927fb7183",
+      "parents": [
+        "b740af2510de1e19fcb399abb862af26ff95ac80"
+      ],
+      "message": "[test] Add Flight regression test for async debug info surviving Promise GC (#37037)\n\n\nCo-authored-by: Claude Fable 5 <noreply@anthropic.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Sebastian \"Sebbie\" Silbermann",
+        "email": "sebastian.silbermann@vercel.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/12292047?v=4"
+      },
+      "authoredAt": "2026-07-16T12:50:17Z",
+      "committedAt": "2026-07-16T12:50:17Z",
+      "url": "https://github.com/react/react/commit/71ecaf89904a352e751ee43b00253c9927fb7183"
+    },
+    {
+      "oid": "b740af2510de1e19fcb399abb862af26ff95ac80",
+      "parents": [
+        "7023f501b644815e29a621875c0379ea757905f6"
+      ],
+      "message": "Clean up flag to enable microtasks in RN (#37021)\n\n## Summary\n\nMicrotasks are enabled by default in RN already, so there's no need to\ngate their use in Fabric atm.\n\n## How did you test this change?\n\nExisting tests. Tested e2e at Meta.",
+      "kind": "commit",
+      "author": {
+        "name": "Rubén Norte",
+        "email": "rubennorte@gmail.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/117921?v=4"
+      },
+      "authoredAt": "2026-07-15T12:21:31Z",
+      "committedAt": "2026-07-15T12:21:31Z",
+      "url": "https://github.com/react/react/commit/b740af2510de1e19fcb399abb862af26ff95ac80"
+    },
+    {
+      "oid": "7023f501b644815e29a621875c0379ea757905f6",
+      "parents": [
+        "c0c39a6b3907eaab35f43074949e2957a2a734c1"
+      ],
+      "message": "[DevTools] Don't reconnect proxy port while page is prerendering (#37009)",
+      "kind": "commit",
+      "author": {
+        "name": "Saransh Jain",
+        "email": "144168135+Saransh-Jainbu@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/144168135?v=4"
+      },
+      "authoredAt": "2026-07-14T09:04:45Z",
+      "committedAt": "2026-07-14T09:04:45Z",
+      "url": "https://github.com/react/react/commit/7023f501b644815e29a621875c0379ea757905f6"
+    },
+    {
+      "oid": "c0c39a6b3907eaab35f43074949e2957a2a734c1",
+      "parents": [
+        "5123b063a7b3cd5c42ea2be2ccebe4e68d8b12e3"
+      ],
+      "message": "[Fiber] Update input.defaultValue for type=number too (#36980)\n\nWe used to avoid updating .defaultValue until blur on number inputs\nbecause of a Chrome bug, but the relevant Chromium behavior was fixed in\n2020 in M85 https://issues.chromium.org/issues/40124871 and likewise in\nWebKit https://bugs.webkit.org/show_bug.cgi?id=217156 so I think we can\nprobably just remove this special-cased logic.\n\nWe do still need some special logic for number inputs because it's the\nonly type where we let users specify a non-string value that has\nmultiple string representations and need to be careful not to clobber\nthe .value if it has a slightly different string than what you'd get\nfrom casting a number to string.\n\nFixes #29862.\n\nTested with the number inputs fixture in current Chrome, Safari, and\nFirefox.",
+      "kind": "commit",
+      "author": {
+        "name": "Sophie Alpert",
+        "email": "git@sophiebits.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/6820?v=4"
+      },
+      "authoredAt": "2026-07-10T02:58:34Z",
+      "committedAt": "2026-07-10T02:58:34Z",
+      "url": "https://github.com/react/react/commit/c0c39a6b3907eaab35f43074949e2957a2a734c1"
+    },
+    {
+      "oid": "5123b063a7b3cd5c42ea2be2ccebe4e68d8b12e3",
+      "parents": [
+        "4400d6c802df45407e7303a6f84a8dcfabde84ff"
+      ],
+      "message": "[Fast Refresh] Find and remount wrapper edits behind lazy() (#36965)\n\nTwo bugs:\n\n- Type changes to a lazy's inner component (e.g., adding a `memo`\n  comparison function) were missed by the refresh scan.\n- If a SimpleMemoComponent needs to be remounted, previously\n  resolveRemountTypeForHotReloading would return the inner function\n  and we would incorrectly recreate the fiber as a FunctionComponent.\n  Instead, we can just use elementType consistently now that the\n  beginWork functions consistently call resolveFamily on the wrapped\n  components.",
+      "kind": "commit",
+      "author": {
+        "name": "Sophie Alpert",
+        "email": "git@sophiebits.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/6820?v=4"
+      },
+      "authoredAt": "2026-07-08T16:59:07Z",
+      "committedAt": "2026-07-08T16:59:07Z",
+      "url": "https://github.com/react/react/commit/5123b063a7b3cd5c42ea2be2ccebe4e68d8b12e3"
+    },
+    {
+      "oid": "4400d6c802df45407e7303a6f84a8dcfabde84ff",
+      "parents": [
+        "3b9b59f7cb4ab9f00c84d9b8cdf2e45eb4bb4b88"
+      ],
+      "message": "[Fast Refresh] Make edits to a memo comparison function take effect (#36964)\n\nEditing the second argument of memo() previously never took effect\nuntil something else remounted the tree, for two separate reasons:\n\n- When adding a comparison function, we need to switch from\n  SimpleMemoComponent to MemoComponent so canPreserveStateBetween\n  should return false.\n- MemoComponent was missing from the hot reload type resolution in\n  createWorkInProgress, so existing fibers kept reading .compare from\n  the old memo object forever.\n\nNew behavior:\n\n- Adding or removing the comparison function remounts; we need to do\n  this when adding (SimpleMemoComponent doesn't support a comparison\n  function) so let's also do it when removing.\n- Editing the comparison function implementation applies in place\n  with state preserved\n\nThe TODO in isCompatibleFamilyForHotReloading is removed as that\nwasn't the right place to do this check.",
+      "kind": "commit",
+      "author": {
+        "name": "Sophie Alpert",
+        "email": "git@sophiebits.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/6820?v=4"
+      },
+      "authoredAt": "2026-07-08T16:58:35Z",
+      "committedAt": "2026-07-08T16:58:35Z",
+      "url": "https://github.com/react/react/commit/4400d6c802df45407e7303a6f84a8dcfabde84ff"
+    },
+    {
+      "oid": "3b9b59f7cb4ab9f00c84d9b8cdf2e45eb4bb4b88",
+      "parents": [
+        "df4bd1b4e99269ac9f3ce3a47ef2e23f76fb1b97"
+      ],
+      "message": "[Fast Refresh] Derive the fiber tag from the resolved type when mounting (#36963)\n\nIf an edit changed the kind of the type (e.g. a plain function got\nwrapped in memo()), the fiber could get the old kind's tag with the\nnew kind's type, usually throwing an error.",
+      "kind": "commit",
+      "author": {
+        "name": "Sophie Alpert",
+        "email": "git@sophiebits.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/6820?v=4"
+      },
+      "authoredAt": "2026-07-08T16:56:38Z",
+      "committedAt": "2026-07-08T16:56:38Z",
+      "url": "https://github.com/react/react/commit/3b9b59f7cb4ab9f00c84d9b8cdf2e45eb4bb4b88"
+    },
+    {
+      "oid": "df4bd1b4e99269ac9f3ce3a47ef2e23f76fb1b97",
+      "parents": [
+        "e3e813d4d6cd61746676f207f0847c744fb3ad64"
+      ],
+      "message": "[Fast Refresh] Unify hot reload type resolution (#36962)\n\nPreviously resolveForwardRefForHotReloading was treated as a special\ncase. It's simpler to move this logic to updateForwardRef which\nmirrors how updateMemoComponent and mountLazyComponent already are,\nand it allows us to unify to a single resolveTypeForHotReloading which\nwe'll use in the next commit.\n\nSince .type is no longer changing we need to set didReceiveUpdate\nmanually.\n\nThis behavior is already tested in \"can update forwardRef render\nfunction in isolation\".",
+      "kind": "commit",
+      "author": {
+        "name": "Sophie Alpert",
+        "email": "git@sophiebits.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/6820?v=4"
+      },
+      "authoredAt": "2026-07-08T16:11:20Z",
+      "committedAt": "2026-07-08T16:11:20Z",
+      "url": "https://github.com/react/react/commit/df4bd1b4e99269ac9f3ce3a47ef2e23f76fb1b97"
+    },
+    {
+      "oid": "e3e813d4d6cd61746676f207f0847c744fb3ad64",
+      "parents": [
+        "994ebf9dce1708045d9570f2fab7702be4763f97"
+      ],
+      "message": "[test] Fix Error Proxy stack assignment in Node.js 21+ (#36967)\n\nSame as #35227, but for `set`.\n\nV8's `stack` setter silently noops when `this` is a Proxy\n(nodejs/node#60862), so prodstack-stripping assignments like\n`error.stack = 'Error: ' + message` in `resolveErrorProd` were dropped\nand reads returned the real stack.\n\nThis caused `yarn test --prod` failures on Node 21+.\n\n## Test Plan\n\n`yarn test --prod` passes on both old and new Nodes.\n\nCo-authored-by: Claude Fable 5 <noreply@anthropic.com>",
+      "kind": "commit",
+      "author": {
+        "name": "dan",
+        "email": "dan.abramov@me.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/810438?v=4"
+      },
+      "authoredAt": "2026-07-08T12:33:19Z",
+      "committedAt": "2026-07-08T12:33:19Z",
+      "url": "https://github.com/react/react/commit/e3e813d4d6cd61746676f207f0847c744fb3ad64"
+    },
+    {
+      "oid": "994ebf9dce1708045d9570f2fab7702be4763f97",
+      "parents": [
+        "3039f5d3f660471a222393e84bc9d3a74691f8df"
+      ],
+      "message": "[Fixture] flight-ssr-bench: drain immediates between iterations to fix false memory leak (#36968)\n\nClaude found this while running the Flight/Fizz bench.\n\n---\n\nWhile measuring memory in this fixture, the Flight server appeared to\nleak ~140KB per render: `heapUsed` grew steadily across hundreds of\nrenders even with forced GC, and roughly 3x worse when a Flight client\nconsumed the stream in the same process. Fizz-only runs were flat, so it\nlooked like a real Flight leak.\n\nOn a closer look, the benchmark loop seems to be lying. React schedules\none `setImmediate` per request, but every render in this fixture\ncompletes entirely in promises and `nextTick` callbacks, so a tight\nbenchmark loop never gives the event loop a chance to run immediates at\nall. They quietly pile up, and each pending callback keeps its\nalready-finished request alive.\n\nHeap snapshots show that every \"leaked\" request was held by a pending\nimmediate, and nothing else. Adding a single `await setImmediate` per\niteration makes memory completely flat over 300 renders, with or without\na same-process Flight client. A real server yields to the event loop on\nevery request, so this can't happen outside a synthetic loop.\n\nThe fix is to yield to the event loop between benchmark iterations,\noutside the timed window, so latency numbers are unaffected. Each\nvariant now also reports how much heap it retains after the run settles.\nThat number was meaningless before — the pile-up made variants with\nbigger per-request graphs look like they used more memory when they\ndidn't.\n\nAfter the fix, a full `yarn bench:bare` run retains +0.3–0.6MB total per\nvariant after 1000 iterations (JIT/warmup noise), instead of drifting by\nhundreds of MB.\n\n---------\n\nCo-authored-by: Claude Fable 5 <noreply@anthropic.com>",
+      "kind": "commit",
+      "author": {
+        "name": "dan",
+        "email": "dan.abramov@me.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/810438?v=4"
+      },
+      "authoredAt": "2026-07-08T12:31:23Z",
+      "committedAt": "2026-07-08T12:31:23Z",
+      "url": "https://github.com/react/react/commit/994ebf9dce1708045d9570f2fab7702be4763f97"
+    },
+    {
+      "oid": "3039f5d3f660471a222393e84bc9d3a74691f8df",
+      "parents": [
+        "5a90a5a7a54d88105b203cfc3230325f495948ae"
+      ],
+      "message": "[Flight] Recognize Node 22+ V8 frames for Promise statics in debug info (#36969)\n\n## Summary\n\nNewer V8 versions (Node.js ≥ ~22) name the stack frames of static\nmethods on the `Promise` constructor `Promise.all`, `Promise.race`,\netc., where older versions named them `Function.all`, `Function.race`,\netc. The `isPromiseCreationInternal` and `isPromiseAwaitInternal`\nallowlists in `ReactFlightServer` only matched the old spellings.\n\n## How did you test this change?\n\n- `yarn test --no-watchman ReactFlightAsyncDebugInfo` — 18/18 pass on\nboth Node 20.19.0 and Node 24.16.0 (previously, \"can track async\ninformation when awaited\" failed on Node 24)\n- `yarn test --silent --no-watchman packages/react-server/src/__tests__\npackages/react-server-dom-webpack` — 243/243 pass on both Node versions,\ndefault and `-r=experimental` channels\n- `yarn test-www --silent --no-watchman\npackages/react-server/src/__tests__` with `__VARIANT__` true and false —\npass\n- `yarn flow dom-node`, `yarn prettier`, `yarn linc` — pass\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-authored-by: Claude Fable 5 <noreply@anthropic.com>",
+      "kind": "commit",
+      "author": {
+        "name": "dan",
+        "email": "dan.abramov@me.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/810438?v=4"
+      },
+      "authoredAt": "2026-07-08T12:02:09Z",
+      "committedAt": "2026-07-08T12:02:09Z",
+      "url": "https://github.com/react/react/commit/3039f5d3f660471a222393e84bc9d3a74691f8df"
+    },
+    {
+      "oid": "5a90a5a7a54d88105b203cfc3230325f495948ae",
+      "parents": [
+        "eb343c7ccb2d475cbdf0231b4af3d1df7d4135d6"
+      ],
+      "message": "[compiler] Bail out with Todo on using and await using declarations (#36946)\n\n## Summary\n\nThe compiler silently rewrote functions containing `using` and `await\nusing` declarations (explicit resource management). BuildHIR's\n`VariableDeclaration` case only special-cases `var`; every other kind\nfalls through to `InstructionKind.Const`. A `using` declaration\ntherefore compiled as a plain memoized `const`, and the implicit dispose\ncall at scope exit was dropped from the compiled output. No diagnostic\nwas emitted. The Rust port mirrored the same bug in `build_hir.rs`.\n\nThe Rust port had a second, harder failure: its\n`VariableDeclarationKind` enum had no `await using` variant, so a Babel\nAST containing one failed serde deserialization at the NAPI boundary\n(\"unknown variant `await using`\") and threw for the whole file.\n\nThe fix records the same per-function Todo bail as the existing `var`\ncase, in both implementations, then continues lowering the declaration\nas `const` so references do not break while the error unwinds (mirroring\nhow `var` continues as `let`). This matches the compiler's established\nTodo-bail precedent for unsupported syntax: the function is skipped with\na logged `CompileError` diagnostic, `panicThreshold` is respected, and\nsibling functions in the same file still compile. This deliberately\ncontrasts with oxc-project/oxc#24217, which handles the same syntax with\na silent per-function skip; nothing in this compiler is skipped without\na surfaced diagnostic.\n\nChanges:\n\n- TS: `BuildHIR.ts` records a Todo `CompilerErrorDetail` for `using` and\n`await using` kinds, in the style of the existing `var` case.\n- Rust: same Todo `record_error` in `build_hir.rs`. New `AwaitUsing`\nvariant (serde name `\"await using\"`) in `react_compiler_ast`, so `await\nusing` survives the NAPI boundary, covered by a serde round-trip unit\ntest.\n- Test harness: enables the `explicitResourceManagement` parser plugin\nin snap and in the e2e script's Babel baseline so fixtures can use the\nsyntax.\n\nFixtures (identical snapshots for the TS and Rust pipelines):\n\n- `error.todo-using-declaration` and\n`error.todo-await-using-declaration` show the Todo diagnostic with code\nframes.\n- `using-declaration-bailout-sibling-compiles` shows the bailing\nfunction left untouched (disposal preserved) while a sibling component\nin the same file is memoized.\n\nThe first commit snapshots the previous broken behavior (`using`\nmemoized as `const` with disposal dropped); the second commit lands the\nfix and updates the snapshots.\n\n## How did you test this change?\n\nAll results below are from the branch rebased onto current main.\n\nTS implementation:\n\n- `yarn snap`: 1809 tests, 1809 passed, 0 failed.\n- `yarn workspace babel-plugin-react-compiler lint`: clean. `yarn\nprettier-check` at the repo root: clean.\n- Manually verified pre-fix output: a component with `using resource =\ngetResource(props.id)` compiled to a memoized `const` with no disposal.\n\nRust implementation:\n\n- `cargo test --workspace`: 42 passed, 0 failed (includes the new serde\nround-trip unit test for both `using` kinds).\n- `bash scripts/test-babel-ast.sh`: passed.\n- `bash scripts/test-rust-port.sh`: 1808 passed, 0 failed.\n- `yarn snap --rust`: 1809 tests, 1809 passed, 0 failed, against the\nsame `.expect.md` snapshots as the TS run.\n- `scripts/test-e2e.ts` (babel variant): the three using fixtures pass\ncode and events parity.\n- Manually verified `await using` now deserializes across the NAPI\nboundary and records the Todo instead of throwing.\n\n\n<div><a\nhref=\"https://cursor.com/agents/bc-5fe4350d-5d42-4c0e-9001-429ed0b5e5b7\"><picture><source\nmedia=\"(prefers-color-scheme: dark)\"\nsrcset=\"https://cursor.com/assets/images/open-in-web-dark.png\"><source\nmedia=\"(prefers-color-scheme: light)\"\nsrcset=\"https://cursor.com/assets/images/open-in-web-light.png\"><img\nalt=\"Open in Web\" width=\"114\" height=\"28\"\nsrc=\"https://cursor.com/assets/images/open-in-web-dark.png\"></picture></a>&nbsp;<a\nhref=\"https://cursor.com/background-agent?bcId=bc-5fe4350d-5d42-4c0e-9001-429ed0b5e5b7\"><picture><source\nmedia=\"(prefers-color-scheme: dark)\"\nsrcset=\"https://cursor.com/assets/images/open-in-cursor-dark.png\"><source\nmedia=\"(prefers-color-scheme: light)\"\nsrcset=\"https://cursor.com/assets/images/open-in-cursor-light.png\"><img\nalt=\"Open in Cursor\" width=\"131\" height=\"28\"\nsrc=\"https://cursor.com/assets/images/open-in-cursor-dark.png\"></picture></a>&nbsp;</div>\n\n---------\n\nCo-authored-by: Cursor Agent <cursoragent@cursor.com>",
+      "kind": "commit",
+      "author": {
+        "name": "lauren",
+        "email": "poteto@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/1390709?v=4"
+      },
+      "authoredAt": "2026-07-08T03:46:37Z",
+      "committedAt": "2026-07-08T03:46:37Z",
+      "url": "https://github.com/react/react/commit/5a90a5a7a54d88105b203cfc3230325f495948ae"
+    },
+    {
+      "oid": "eb343c7ccb2d475cbdf0231b4af3d1df7d4135d6",
+      "parents": [
+        "12a4baeca157fa8ae0cbd6463595ea7f3af10c26"
+      ],
+      "message": "[Fast Refresh] Remount correctly when an edit changes the component kind (#36950)\n\nFixes #30659. I'm not confident in this yet but here's what Fable said\nbased on\nhttps://github.com/react/react/pull/32214#issuecomment-2734436781:\n\nEditing a component from a plain function to a memo or forwardRef\nwrapper (or between wrapper kinds) crashed with \"Component is not a\nfunction\", because canPreserveStateBetween only compared hook\nsignatures. The edit was classified as state-preserving, so\ncreateWorkInProgress swapped the wrapper object in as the type of a\nFunctionComponent fiber and renderWithHooks tried to call it.\n\nTwo fixes, both DEV-only:\n\n- canPreserveStateBetween returns false when typeof or $$typeof differ.\nA fiber's tag is derived from the kind of its type, so state can never\nbe preserved across a kind change; these edits must go to staleFamilies\n(remount). Nested wrappers need no special handling because register()\ncreates a family per nesting level ($type/$render ids), and each level's\nkind is compared against its own family.\n\n- The reconciler now finds and remounts wrapper fibers whose outer kind\nchanged. scheduleFibersWithFamiliesRecursively previously resolved\nfamilies only through the inner implementation (type/type.render), but a\nkind-changing edit is recorded only on the outer type's family, so edits\nlike memo -> function never reached the scanner and were silently\ndropped. The scanner now also checks the elementType's family, and the\n_debugNeedsRemount branch in beginWork rebuilds the fiber from\nfamily.current (the latest registered type for the fiber's identity)\nrather than the fiber's possibly-stale inner type. This also fixes stale\nsimple memo remounts recreating as plain functions, dropping the memo\nwrapper.\n\nUnlike the reverted #30660 (see #32214), this does not fabricate\nfamilies or guess type shapes: families are still created in exactly one\nplace, and the same ID always resolves to the same family.\n\nRestores the tests from #30660 and adds coverage for changing the inner\ntype of a memo between function and forwardRef.\n\nCo-authored-by: BIKI DAS <bikid475@gmail.com>\nCo-authored-by: dan <dan.abramov@me.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Sophie Alpert",
+        "email": "git@sophiebits.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/6820?v=4"
+      },
+      "authoredAt": "2026-07-07T23:30:46Z",
+      "committedAt": "2026-07-07T23:30:46Z",
+      "url": "https://github.com/react/react/commit/eb343c7ccb2d475cbdf0231b4af3d1df7d4135d6"
+    },
+    {
+      "oid": "12a4baeca157fa8ae0cbd6463595ea7f3af10c26",
+      "parents": [
+        "129154cedf159a4f4a76634889e98d06760278cc"
+      ],
+      "message": "[compiler] Port JSX tag classification fix to Rust (not-lowercase is a component) (#36951)",
+      "kind": "commit",
+      "author": {
+        "name": "lauren",
+        "email": "poteto@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/1390709?v=4"
+      },
+      "authoredAt": "2026-07-07T16:46:24Z",
+      "committedAt": "2026-07-07T16:46:24Z",
+      "url": "https://github.com/react/react/commit/12a4baeca157fa8ae0cbd6463595ea7f3af10c26"
+    },
+    {
+      "oid": "129154cedf159a4f4a76634889e98d06760278cc",
+      "parents": [
+        "b8f50c93942929e0736941d2065bce5598d6484b"
+      ],
+      "message": "[Fiber] Don't invoke effects on moved children in StrictMode (#36948)\n\nFixes #29585.",
+      "kind": "commit",
+      "author": {
+        "name": "Sophie Alpert",
+        "email": "git@sophiebits.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/6820?v=4"
+      },
+      "authoredAt": "2026-07-07T16:09:44Z",
+      "committedAt": "2026-07-07T16:09:44Z",
+      "url": "https://github.com/react/react/commit/129154cedf159a4f4a76634889e98d06760278cc"
+    },
+    {
+      "oid": "b8f50c93942929e0736941d2065bce5598d6484b",
+      "parents": [
+        "91cd8128741854d3281ca6511d8c3d76e877be4c"
+      ],
+      "message": "[Fiber] Don't set .innerHTML when it hasn't changed (#36949)\n\nFixes #30994. We compared this previously but it regressed in #26501.",
+      "kind": "commit",
+      "author": {
+        "name": "Sophie Alpert",
+        "email": "git@sophiebits.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/6820?v=4"
+      },
+      "authoredAt": "2026-07-07T16:09:10Z",
+      "committedAt": "2026-07-07T16:09:10Z",
+      "url": "https://github.com/react/react/commit/b8f50c93942929e0736941d2065bce5598d6484b"
+    },
+    {
+      "oid": "91cd8128741854d3281ca6511d8c3d76e877be4c",
+      "parents": [
+        "fc08d760317d909dbda478e8f9b577dced1f5954"
+      ],
+      "message": "[DevTools] Fix WhatChanged scrolling out of view in profiler sidebar (#36244)\n\n## Summary\nPreviously, WhatChanged and InspectedElementBadges were rendered inside\nthe same scrollable [Content\ndiv](https://github.com/facebook/react/blob/main/packages/react-devtools-shared/src/devtools/views/Profiler/SidebarSelectedFiberInfo.js#L130-L147)\nas the commit list. When a component had many render timestamps,\nscrolling down to pick one caused the \"what changed\" context to scroll\nout of view, requiring the user to scroll back up to see it.\n\nWhile the profiler already exposes render details via hover tooltips on\nfibers, those are transient and pointer-dependent. This change\nintroduces a sticky header section at the top of the Content div that\nholds the current commit summary, badges, and WhatChanged. The section\nis collapsible (click or Enter/Space) so users can reclaim vertical\nspace for the commit list when needed. The commit list now sits below\nthe sticky header as a sibling, so it scrolls independently while the\nsummary remains always visible.\n\nCloses #36525 \n\n---\n### Current Behavior\n\nhttps://github.com/user-attachments/assets/05f2889a-4e0d-4464-965a-2821c63c2d30\n\n### Proposed UI\nApologies on this one. I had to [upload it on\nYouTube](https://youtu.be/g3KMaqn33G0) since the video is quite big.\n\n---\n\n## How did you test this change?\n\n### Manual Testing\n| Case  | Screenshot |\n| ------------- | ------------- |\n| Expanded simple | <img width=\"1512\" height=\"948\"\nalt=\"expanded-default\"\nsrc=\"https://github.com/user-attachments/assets/00d3bf11-ef98-463e-96ec-c918e58147ff\"\n/> |\n| Collapsed Simple | <img width=\"1512\" height=\"948\"\nalt=\"collapsed-default\"\nsrc=\"https://github.com/user-attachments/assets/75d0ae79-c96f-4c55-9dc1-538ba65037b8\"\n/> |\n| Focused using tab navigation while expanded | <img width=\"1512\"\nheight=\"948\" alt=\"expanded-tab-focused-simple\"\nsrc=\"https://github.com/user-attachments/assets/c4098f2d-1c43-4b04-ab69-1e646e79bc8e\"\n/> |\n| Focused using tab navigation while collapsed | <img width=\"1512\"\nheight=\"948\" alt=\"collapsed-tab-focused-simple\"\nsrc=\"https://github.com/user-attachments/assets/75840812-b700-44dd-b82d-51d5a867f501\"\n/> |\n| Long render info( expanded ) | <img width=\"1512\" height=\"948\"\nalt=\"long-desc-expanded\"\nsrc=\"https://github.com/user-attachments/assets/53c4d776-55d5-4bb0-818d-a70e032e57d7\"\n/> |\n| Long render info( collapsed ) | <img width=\"1512\" height=\"948\"\nalt=\"long-desc-collapsed\"\nsrc=\"https://github.com/user-attachments/assets/45eb7f6f-fcc6-4f7b-88e7-e3ece9e59d19\"\n/> |\n\n#### Hover (expanded)\n\nhttps://github.com/user-attachments/assets/d04668d3-1e0e-44c7-af7e-087d246ec07d\n\n#### Hover (collapsed)\n\nhttps://github.com/user-attachments/assets/86638b8d-60c2-4cfa-b357-c1104e76767e\n\n---\n\n## Why this matters\n\nThis is more than a visual polish issue:\n\n* The Profiler is fundamentally a context-driven debugging tool\n* Losing the “why did this render?” explanation during navigation\ninterrupts analysis flow\n* The issue becomes progressively worse on large applications or heavily\ninteractive surfaces\n* Hover tooltips are not an adequate replacement because they are\ntransient and pointer-dependent\n* Keyboard users are disproportionately affected due to repeated\nnavigation and scrolling\n\nIn practice, this increases cognitive load during performance debugging\nand makes long profiling sessions unnecessarily cumbersome.",
+      "kind": "commit",
+      "author": {
+        "name": "Kurtd Daniel Bigtas",
+        "email": "114039848+Kertsu@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/114039848?v=4"
+      },
+      "authoredAt": "2026-07-07T13:18:51Z",
+      "committedAt": "2026-07-07T13:18:51Z",
+      "url": "https://github.com/react/react/commit/91cd8128741854d3281ca6511d8c3d76e877be4c"
+    },
+    {
+      "oid": "fc08d760317d909dbda478e8f9b577dced1f5954",
+      "parents": [
+        "08725f213248f886c7131d406d263fb42b01d501"
+      ],
+      "message": "[compiler] Fix JSX tags prefixed with `_` or `$` incorrectly treated as host elements (#36688)\n\n## Summary\n\nFixes #36601\n\n### Problem\n\nIn `lowerJsxElementName` (BuildHIR.ts), the condition `if\n(tag.match(/^[A-Z]/))` only treats JSX tags starting with an **uppercase\nletter** as component references. Tags starting with `_`, `$`, or any\nother non-letter character fell through to the `else` branch and were\nincorrectly classified as `BuiltinTag` (host/intrinsic elements).\n\nThis meant that `<_Bar />` or `<$Foo />` was treated like `<div />`,\ncausing the compiler to skip memoization of the component and\npotentially producing incorrect output.\n\n### Root Cause\n\nJSX semantics (as implemented by Babel's JSX transform) are:\n- Tag starts with **lowercase** letter → host/intrinsic element (string\ntag)\n- **Everything else** → component reference (in-scope identifier)\n\nThe original code only handled the first half of that rule (\"starts with\nuppercase → component\") while ignoring identifiers like `_Bar` and\n`$Foo`.\n\n### Fix\n\nChange:\n```ts\nif (tag.match(/^[A-Z]/)) {\n```\nTo:\n```ts\nif (!tag.match(/^[a-z]/)) {\n```\n\nThis correctly classifies any JSX identifier that does NOT start with a\nlowercase letter as a component reference, matching JSX spec semantics.\n\n### Test\n\nAdded fixture `jsx-underscore-prefix-component` that renders `<_Bar />`\nand verifies the compiler correctly memoizes it as a component\nreference.\n\n## How did you test this change?\n\n- Added new compiler fixture test: `jsx-underscore-prefix-component`\n- Ran `yarn workspace babel-plugin-react-compiler lint` ✅\n- Ran snap tests with the new fixture to generate expected output ✅",
+      "kind": "commit",
+      "author": {
+        "name": "Dmitrii",
+        "email": "jsleitor@gmail.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/14165771?v=4"
+      },
+      "authoredAt": "2026-07-07T05:24:54Z",
+      "committedAt": "2026-07-07T05:24:54Z",
+      "url": "https://github.com/react/react/commit/fc08d760317d909dbda478e8f9b577dced1f5954"
+    },
+    {
+      "oid": "08725f213248f886c7131d406d263fb42b01d501",
+      "parents": [
+        "23def8fd0bd46f8ee56f81190b2bdebe37fd573a"
+      ],
+      "message": "[compiler]: add `useWindowVirtualizer` to known incompatible libraries (#36912)\n\n## Summary\n\n#34493 added `@tanstack/react-virtual`'s `useVirtualizer` to the known\nincompatible libraries, but not `useWindowVirtualizer`.\n\nBoth hooks are thin wrappers around the same internal\n`useVirtualizerBase`, so they return the same referentially-stable\nvirtualizer instance. Its methods (e.g. `getVirtualItems()`,\n`getTotalSize()`) return internally-mutated values rather than new ones,\nwhich is exactly the \"interior mutability\" pattern that breaks\nmemoization described in the module type provider.\n\nBecause only `useVirtualizer` was registered, code using\n`useWindowVirtualizer` is silently compiled with the same unsafe\nmemoization. In our app this froze `getVirtualItems()` to its\nfirst-render value (an empty `[]` before measurement), producing\npermanently-empty virtualized lists — the same class of bug #34493\nfixed, just via the window variant.\n\nThis registers `useWindowVirtualizer` alongside `useVirtualizer` with\nthe identical shape, in **both** implementations:\n-\n`compiler/packages/babel-plugin-react-compiler/src/HIR/DefaultModuleTypeProvider.ts`\n-\n`compiler/crates/react_compiler_hir/src/default_module_type_provider.rs`\n(Rust port)\n\nSee also the community report referenced in #34493:\nhttps://github.com/TanStack/virtual/issues/736#issuecomment-3065658277\n\n## How did you test this change?\n\nEach addition mirrors the existing `useVirtualizer` entry exactly (same\nkind, params, return type, and `knownIncompatible` message shape); both\nare data-only additions to the module type providers, following the\nprecedent set by #34493 which changed only the TS file. The Rust change\nkeeps the two providers in sync.",
+      "kind": "commit",
+      "author": {
+        "name": "gtkatakura",
+        "email": "8618687+gtkatakura@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/8618687?v=4"
+      },
+      "authoredAt": "2026-07-06T23:54:22Z",
+      "committedAt": "2026-07-06T23:54:22Z",
+      "url": "https://github.com/react/react/commit/08725f213248f886c7131d406d263fb42b01d501"
+    },
+    {
+      "oid": "23def8fd0bd46f8ee56f81190b2bdebe37fd573a",
+      "parents": [
+        "5afc23a2b6784d2c085a67f2a3cf9d84e7e6c301"
+      ],
+      "message": "fix[flow]: apply new type cast syntax (#36938)\n\nQuick follow-up to https://github.com/react/react/pull/36786, which\nwasn't rebased onto version of `main` that already had Flow upgraded.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-06T14:23:25Z",
+      "committedAt": "2026-07-06T14:23:25Z",
+      "url": "https://github.com/react/react/commit/23def8fd0bd46f8ee56f81190b2bdebe37fd573a"
+    },
+    {
+      "oid": "5afc23a2b6784d2c085a67f2a3cf9d84e7e6c301",
+      "parents": [
+        "4b5d1c937e365ae4d4c27abd5e26f7467acb4fb0"
+      ],
+      "message": "[DevTools] Make component search results directly navigable (#36786)\n\n## Summary\n\nIn a large react app, especially when components having similar starting\nnames like Table, TableColumn, TableCell, TableRow all together 100+\ncomponents when rendered in a virtualized table. Traversing the search\nresult is sometimes difficult with scroll\n\nThe component tree search only let you step through matches one at a\ntime (Enter / Shift+Enter). In large apps with many similarly-named\ncomponents (Table, TableRow, TableCell, ...) a search can return 100+\nmatches in a virtualized list, making a specific match tedious to reach.\n\n- the result counter is an editable, live-scrubbing\n  index field: typing a number scrolls to that match as you type\n  (clamped to range)\n\n- Fixes re-search getting stuck, clearing the box and retyping the same\n  term while a match was still selected snapped back to that same\n  component. It now advances to the next match (find-next semantics).\n  \n  \n\n\n## How did you test this change?\n\n\nAdds a SearchableTable example to the DevTools shell and unit tests for\nthe new action and the retype behavior.\n\n\n\n\nhttps://github.com/user-attachments/assets/7ea9801a-7bcb-4e8f-bf73-a5307a0fdbae\n\n\ncc @hoxyq Let me know what do you feel about this feature, if its\nhelpful for devtools.",
+      "kind": "commit",
+      "author": {
+        "name": "BIKI DAS",
+        "email": "72331432+Biki-das@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/72331432?v=4"
+      },
+      "authoredAt": "2026-07-06T13:59:51Z",
+      "committedAt": "2026-07-06T13:59:51Z",
+      "url": "https://github.com/react/react/commit/5afc23a2b6784d2c085a67f2a3cf9d84e7e6c301"
+    },
+    {
+      "oid": "4b5d1c937e365ae4d4c27abd5e26f7467acb4fb0",
+      "parents": [
+        "4f9389423b7319e1f7acc3d158c84a8365462748"
+      ],
+      "message": "[DevTools] Fix printOperationsArray decode of applied activity slice change (#36935)\n\n`printOperationsArray` in `react-devtools-shared` walks an operations\narray under\nthe invariant that each `switch` case leaves `i` pointing at the next\nopcode (loop\nheader at `packages/react-devtools-shared/src/utils.js`).\n\nThe `TREE_OPERATION_APPLIED_ACTIVITY_SLICE_CHANGE` case broke that\ninvariant:\n\n```js\ncase TREE_OPERATION_APPLIED_ACTIVITY_SLICE_CHANGE: {\n  i++;                                        // skip opcode -> i now at the value slot\n  const activitySliceIDChange = operations[i + 1]; // reads the slot AFTER the value; i not advanced\n  ...\n}\n```\n\nThe operation is exactly two slots, `[opcode, activitySliceID]` (see the\nwriter in\n`packages/react-devtools-shared/src/backend/fiber/renderer.js`, which\npushes the\nopcode then the id). So the case did two things wrong:\n\n1. It logged the wrong number: `operations[i + 1]` reads the slot\n*after* the\nvalue (the next operation's opcode, or `undefined` at the end of the\narray).\n2. It left `i` pointing at the value slot, so the outer `while (i <\noperations.length)` loop re-read the activity-slice id as an opcode. For\nany\nnon-zero slice id that falls through to `default: throw\nError(\"Unsupported\n   Bridge operation ...\")`, aborting the whole dump.\n\nThe two canonical decoders of this same operation both use the correct\npattern\n(skip the opcode, then read *and* advance past the value):\n\n- `devtools/store.js`: `i++; nextActivitySliceID = operations[i++];`\n- `devtools/views/Profiler/CommitTreeBuilder.js`: `i++; const\nactivitySliceIDChange = operations[i++];`\n\nThis change makes `printOperationsArray` match them by reading\n`operations[i++]`.\n\nThis is a debug-only diagnostic path: the only caller is the\n`__DEBUG__`-guarded\ndump in `backend/legacy/renderer.js`, so it is not a production crash.\nThe bug was\nintroduced in #34908.\n\n## How did you test this change?\n\nAdded a regression test for `printOperationsArray` in\n`packages/react-devtools-shared/src/__tests__/utils-test.js`. The\nfixture chains\ntwo activity-slice operations, `[rendererID, rootID, stringTableSize=0,\nopcode, 42,\nopcode, 0]`; the trailing operation is what forces the reader to advance\npast the\nfirst value slot rather than re-read it. It asserts the call does not\nthrow, logs\nonce, and that the message contains both `Applied activity slice change\nto 42` and\n`Reset applied activity slice`.\n\nRan the DevTools Jest project (built first, as that project requires a\nbuild):\n\n- With the fix: 51/51 pass, including the new test.\n- Reverting only the one-line fix back to `operations[i + 1]` and\nrebuilding: the\nnew test fails with `Unsupported Bridge operation \"42\"` (exactly the\npredicted\n  failure), 50 pass / 1 fail. Restored the fix and it is green again.\n\n`yarn prettier-check` and `yarn linc` are clean on the changed files.",
+      "kind": "commit",
+      "author": {
+        "name": "Anas Khan",
+        "email": "83116240+anxkhn@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/83116240?v=4"
+      },
+      "authoredAt": "2026-07-06T13:27:17Z",
+      "committedAt": "2026-07-06T13:27:17Z",
+      "url": "https://github.com/react/react/commit/4b5d1c937e365ae4d4c27abd5e26f7467acb4fb0"
+    },
+    {
+      "oid": "4f9389423b7319e1f7acc3d158c84a8365462748",
+      "parents": [
+        "aa43b0fbd85a11014b17bd6678e439674478859f"
+      ],
+      "message": "docs: remove stale parentType param from validateChildKeys JSDoc (#36928)\n\n`validateChildKeys` in `packages/react/src/jsx/ReactJSXElement.js` had a\nsignature\nof `validateChildKeys(node, parentType)`, but #34174 (\"Remove unused\narguments from\nReactElement\") dropped the second argument, changing the signature to\n`validateChildKeys(node)` and updating every call site to pass a single\nargument.\n\nThat change removed several now-unused `@param` lines from the same\nfile, but left\none behind on `validateChildKeys`:\n\n```js\n/**\n * ...\n * @internal\n * @param {ReactNode} node Statically passed child of any type.\n * @param {*} parentType node's parent's type.   // <- no such parameter anymore\n */\nfunction validateChildKeys(node) {\n```\n\n`parentType` no longer appears anywhere in the function signature or\nbody, so this\n`@param` line is stale and misleading to anyone reading the doc comment.\nThis PR\ndeletes that single line. The remaining `@param {ReactNode} node`\nalready fully and\ncorrectly documents the sole parameter. No code or behavior change.\n\n## How did you test this change?\n\nThis is a documentation-only change (a JSDoc comment on an `@internal`\nhelper), so\nthere is no runtime behavior to test. I verified it as follows:\n\n- Confirmed `parentType` no longer appears anywhere in\n`packages/react/src/jsx/ReactJSXElement.js` (`grep -n parentType`\nreturns no\n  matches after the change).\n- Confirmed the signature `function validateChildKeys(node)` and all\ncall sites are\n  unchanged by this diff.\n- `yarn prettier` (via `scripts/prettier/index.js check-changed`) -\nclean.\n- `yarn linc` (ESLint on changed files) - passed.\n- `yarn flow dom-node` - No errors.\n\n---\n\n## Diff (for reference)\n\n```diff\ndiff --git a/packages/react/src/jsx/ReactJSXElement.js b/packages/react/src/jsx/ReactJSXElement.js\n@@ -860,7 +860,6 @@ export function cloneElement(element, config, children) {\n   *\n   * @internal\n   * @param {ReactNode} node Statically passed child of any type.\n- * @param {*} parentType node's parent's type.\n   */\n function validateChildKeys(node) {\n```",
+      "kind": "commit",
+      "author": {
+        "name": "Anas Khan",
+        "email": "83116240+anxkhn@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/83116240?v=4"
+      },
+      "authoredAt": "2026-07-06T13:18:44Z",
+      "committedAt": "2026-07-06T13:18:44Z",
+      "url": "https://github.com/react/react/commit/4f9389423b7319e1f7acc3d158c84a8365462748"
+    },
+    {
+      "oid": "aa43b0fbd85a11014b17bd6678e439674478859f",
+      "parents": [
+        "00bacdeb1fccbd492198c83a62f8620104607629"
+      ],
+      "message": "[react-devtools] Keep console specifiers literal when no argument is supplied (#36930)\n\n`formatConsoleArguments` in\n\n`packages/react-devtools-shared/src/backend/utils/formatConsoleArguments.js`\nis used by the DevTools backend (via `hook.js`) to inline `console.*`\nprintf-style substitutions after stripping React's appended component\nstack.\nFor `%s`/`%d`/`%i`/`%f` it consumes the next argument with\n`args.splice(argumentsPointer, 1)` and formats the result.\n\nWhen a format string has more specifiers than arguments, `splice`\nreturns an\nempty array, so `arg` is `undefined` and the specifier is rendered as\ntext:\n`%s` becomes `\"undefined\"`, and `%d`/`%i`/`%f` become `\"NaN\"`.\n\n```js\nformatConsoleArguments('%s %s', 'the');\n// before: ['the undefined']\n// after:  ['the %s']\n```\n\nBrowsers and Node's `util.format` leave an unmatched specifier as a\nliteral\n(`console.log('%s %s', 'a')` prints `a %s`; `console.log('%d')` prints\n`%d`).\nSo a message like `console.warn('value: %s')` was shown in DevTools as\n`value: undefined` instead of `value: %s`.\n\nThis guards each of the `%d`/`%i`, `%f`, and `%s` cases on argument\navailability (`argumentsPointer >= args.length`): when nothing is left\nto\nconsume it keeps the specifier text and does not splice, mirroring the\nexisting trailing-`%` handling added in #36852. An explicitly passed\n`undefined`/`null` argument is unchanged and still renders as\n`undefined`/`null`, since a value is present at that position (the\n`formats nullish values` test still passes).\n\n## How did you test this change?\n\nAdded a regression test to the existing `formatConsoleArguments`\ndescribe\nblock in `packages/react-devtools-shared/src/__tests__/utils-test.js`:\n\n```js\nit('keeps specifiers literal when no argument is supplied', () => {\n  expect(formatConsoleArguments('%s %s', 'the')).toEqual(['the %s']);\n  expect(formatConsoleArguments('%s %d', 'value')).toEqual(['value %d']);\n  expect(formatConsoleArguments('%s %i', 'value')).toEqual(['value %i']);\n  expect(formatConsoleArguments('%s %f', 'value')).toEqual(['value %f']);\n});\n```\n\nEach assertion fails on `main` (it produces `['the undefined']` and\n`['value NaN']`) and passes with the fix.\n\nCommands run locally:\n\n```\nyarn test --build --project devtools packages/react-devtools-shared/src/__tests__/utils-test.js\n# 51 passed, 51 total\n\nyarn lint packages/react-devtools-shared/src/backend/utils/formatConsoleArguments.js \\\n          packages/react-devtools-shared/src/__tests__/utils-test.js\n# Lint passed.\n\nyarn flow dom-node\n# No errors!\n\nyarn prettier-check packages/react-devtools-shared/src/backend/utils/formatConsoleArguments.js \\\n                    packages/react-devtools-shared/src/__tests__/utils-test.js\n# clean\n```\n\nCross-checked the expected output against Node `util.format`:\n`util.format('%s %s', 'the')` -> `the %s`; `util.format('%d')` -> `%d`.",
+      "kind": "commit",
+      "author": {
+        "name": "Anas Khan",
+        "email": "83116240+anxkhn@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/83116240?v=4"
+      },
+      "authoredAt": "2026-07-06T13:18:10Z",
+      "committedAt": "2026-07-06T13:18:10Z",
+      "url": "https://github.com/react/react/commit/aa43b0fbd85a11014b17bd6678e439674478859f"
+    },
+    {
+      "oid": "00bacdeb1fccbd492198c83a62f8620104607629",
+      "parents": [
+        "e71a6393e66b0d2add46ba2b2c5db563a0563828"
+      ],
+      "message": "[react-devtools] substitute %i and %f in console format strings (#36929)\n\n`formatConsoleArgumentsToSingleString` in\n`packages/react-devtools-shared/src/backend/utils/index.js`\ninlines `console.*` printf-style substitutions into a single string.\nThat string is\nused both as the dedup key and as the displayed text for per-component\nwarnings/errors.\n\nThe `switch` that consumes the captured flag handles `s`, `d`, `i`, and\n`f`, and the\nfunction's own header comment says it \"Implements s, d, i and f\nplaceholders\". But\nthe substitution regex only captured `[jds]`:\n\n```js\nconst REGEXP = /(%?)(%([jds]))/g;\n```\n\nSo `%i` and `%f` were never matched. The `case 'i'` and `case 'f'` arms\nwere dead\ncode: the specifier was emitted literally and its argument was never\nconsumed. Worse,\nbecause the unmatched specifier does not shift its argument, every\nfollowing specifier\nin the same format string then binds to the wrong argument (a cascading\noff-by-one\nover the remaining args).\n\n`%i` and `%f` are standard console integer/float specifiers (Node\n`util.format` and\nbrowsers both support them), so this affected common log formats. The\nfix adds `i`\nand `f` to the regex class so the existing switch arms run:\n\n```js\nconst REGEXP = /(%?)(%([jdisf]))/g;\n```\n\nThis is a one-character-class change that reconciles the regex with the\nswitch and\nthe header comment. The pre-existing behavior that `%j` is matched but\nhas no\n`case` (so it falls through unchanged) is intentionally left as-is; it\nis out of\nscope for this fix.\n\n## How did you test this change?\n\nAdded three regression tests to the existing\n`formatConsoleArgumentsToSingleString`\ndescribe block in\n`packages/react-devtools-shared/src/__tests__/utils-test.js`:\n\n- `formatConsoleArgumentsToSingleString('%i', 3.14)` -> `'3'`\n- `formatConsoleArgumentsToSingleString('%f', 3.5)` -> `'3.5'`\n- `formatConsoleArgumentsToSingleString('a %i b %s', 7, 'x')` -> `'a 7 b\nx'` (locks\n  in argument alignment)\n\nCommands run locally (experimental devtools bundles):\n\n```\nyarn build-for-devtools\nyarn test --build --project=devtools -r=experimental packages/react-devtools-shared/src/__tests__/utils-test.js\n```\n\nResult: `Tests: 53 passed, 53 total`.\n\nTo confirm the tests actually cover the bug, I reverted the\none-character fix back to\n`[jds]` and reran: the three new tests fail exactly as the bug predicts,\ne.g. `%i`\nyields `\"%i 3.14\"` and `a %i b %s` yields `\"a %i b 7 x\"` (the `%s` binds\nto `7`\ninstead of `x`, showing the off-by-one). Restoring the fix makes them\npass again.\n\nAlso green:\n\n```\nyarn linc            # ESLint on changed files: passed\nyarn prettier        # no files reflagged\nyarn flow dom-node   # No errors!\n```",
+      "kind": "commit",
+      "author": {
+        "name": "Anas Khan",
+        "email": "83116240+anxkhn@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/83116240?v=4"
+      },
+      "authoredAt": "2026-07-06T13:16:15Z",
+      "committedAt": "2026-07-06T13:16:15Z",
+      "url": "https://github.com/react/react/commit/00bacdeb1fccbd492198c83a62f8620104607629"
+    },
+    {
+      "oid": "e71a6393e66b0d2add46ba2b2c5db563a0563828",
+      "parents": [
+        "3508aee63d59b7d4eb8e82171b78ef214a2487ca"
+      ],
+      "message": "[Perf Tracks] Don't enumerate typed array props in dev (#36913)",
+      "kind": "commit",
+      "author": {
+        "name": "udit",
+        "email": "udit.dewan21@gmail.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/194863456?v=4"
+      },
+      "authoredAt": "2026-07-02T18:51:05Z",
+      "committedAt": "2026-07-02T18:51:05Z",
+      "url": "https://github.com/react/react/commit/e71a6393e66b0d2add46ba2b2c5db563a0563828"
+    },
+    {
+      "oid": "3508aee63d59b7d4eb8e82171b78ef214a2487ca",
+      "parents": [
+        "7ce677d40659f0fefd8ce122480716d0c8e926b4"
+      ],
+      "message": "[react-devtools] add parent stack tool (#36825)\n\nThis PR adds a new `getParentStack` tool to the Facade and an\nintegration of it in `react-devtools-cdt-mcp`.\n\nSimilarly to the owner stack tool, it receives a `uid` of a specific\ncomponent and returns structural parent stack. For every node, it\nincludes `uid`, `name`, `type`.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-02T15:49:03Z",
+      "committedAt": "2026-07-02T15:49:03Z",
+      "url": "https://github.com/react/react/commit/3508aee63d59b7d4eb8e82171b78ef214a2487ca"
+    },
+    {
+      "oid": "7ce677d40659f0fefd8ce122480716d0c8e926b4",
+      "parents": [
+        "6ca51ab1bd0d726eb4beb8a32f7ad162109710ed"
+      ],
+      "message": "[Fizz] Guard the shell-error callbacks instead of nulling them out on the request (#36916)\n\nFollow-up to #36903\n\nThe previous change stopped `onAllReady` from firing after a fatal shell\nerror by assigning `noop` to `request.onAllReady` inside `fatalError`.\nThis mutated a completion callback on the request as a side channel,\nmirroring the existing `request.onShellError = noop` in `completeShell`.\nThis refactor removes both noop assignments and instead guards the calls\nat the point where they would happen, so the callbacks on the request\nstay the ones the caller passed in.\n\nFor `onAllReady`, `erroredTask` now returns right after `fatalError` in\nthe root (`boundary === null`) case, so it no longer falls through to\nthe `allPendingTasks === 0` check that calls `completeAll`. This matches\nthe sibling `finishAbortedTask`, which already returns after a fatal\nroot error. Later task completions cannot reach `completeAll` either,\nbecause `performWork` bails out once the request status is past `OPEN`.\n\nFor `onShellError`, `fatalError` now decides whether to call it based on\nthe same condition that governed the assignment: the shell is complete\nexactly when `request.pendingRootTasks === 0`, and `completeShell` only\nruns at that point, so guarding the call is equivalent to the previous\nnulling out. `onFatalError` still always fires because the error is\nalways fatal to the request.\n\nThis is a behavior-preserving refactor of the fix landed in #36903; the\ntests added there continue to pass unchanged.\n\nCo-authored-by: Claude Opus 4.7 <noreply@anthropic.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Sebastian \"Sebbie\" Silbermann",
+        "email": "sebastian.silbermann@vercel.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/12292047?v=4"
+      },
+      "authoredAt": "2026-07-02T09:27:44Z",
+      "committedAt": "2026-07-02T09:27:44Z",
+      "url": "https://github.com/react/react/commit/7ce677d40659f0fefd8ce122480716d0c8e926b4"
+    },
+    {
+      "oid": "6ca51ab1bd0d726eb4beb8a32f7ad162109710ed",
+      "parents": [
+        "7a7e893c50c435cca51f40842b3fe5a5c48c09b3"
+      ],
+      "message": "[react-devtools-cdt-mcp] run E2E tests in CI (#36824)\n\nAdds a GH Actions workflow for the newly introduced e2e test runner for\n`react-devtools-cdt-mcp`.\n\nExample run -\nhttps://github.com/react/react/actions/runs/27830544937/job/82366479218?pr=36824.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-02T05:30:20Z",
+      "committedAt": "2026-07-02T05:30:20Z",
+      "url": "https://github.com/react/react/commit/6ca51ab1bd0d726eb4beb8a32f7ad162109710ed"
+    },
+    {
+      "oid": "7a7e893c50c435cca51f40842b3fe5a5c48c09b3",
+      "parents": [
+        "ec0fca31f419e821018fc67bc88f2ce62ffb2050"
+      ],
+      "message": "[compiler] Fix failing Rust compiler test case for todo-locally-require-fbt (#36767)\n\nTwo fundamental changes (plus a lot of formatting that got mixed in :/\n): Modify how we determine if a local binding exists for the case where\nthe scope is extracted from a function, rather than a module, which is\nthe case for snap tests. And, loosen the rust port tester to allow debug\noutput to be printed from one compiler or another as long as both sides\nerror in the same phase with the same error message (basically, the rust\nport emits debug information before throwing an error, whereas the TS\nversion does one or the other -- but it's not actually a real\ndifference).\n\nWith this change and loosening, the Rust compiler conforms on the\ntodo-locally-require-fbt case.\n\n---------\n\nCo-authored-by: mvitousek <mvitousek@devvm12588.pnb0.facebook.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Michael Vitousek",
+        "email": "mmvitousek@gmail.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/1629813?v=4"
+      },
+      "authoredAt": "2026-07-02T05:16:29Z",
+      "committedAt": "2026-07-02T05:16:29Z",
+      "url": "https://github.com/react/react/commit/7a7e893c50c435cca51f40842b3fe5a5c48c09b3"
+    },
+    {
+      "oid": "ec0fca31f419e821018fc67bc88f2ce62ffb2050",
+      "parents": [
+        "7df975a0c56de0e9d0d6d9c36a000185db58fc00"
+      ],
+      "message": "Add parentEnter/parentExit props to ViewTransition (#36690)\n\nAn alternative to https://github.com/facebook/react/pull/36135\n\n___\n\nAdds experimental support for `parentEnter` and `parentExit` on nested\n`<ViewTransition>` components, so descendants can animate when an\nancestor boundary enters or exits.\n\nThis is gated behind the `enableViewTransitionParentEnterExit` feature\nflag.\n\nAddresses the use case of animating individual items in a list (such as\nsliding inactive feed posts off-screen) when a parent `<ViewTransition>`\nis the one being added or removed during the update.\n\nToday, `exit`/ `enter` only fire on the `<ViewTransition>` that was\ndirectly mounted or unmounted. Nested boundaries in the same subtree are\nnot visited for their own `exit`/`enter` when the whole tree goes away\nas one unit, which is usually what you want. But some cases need an\nexplicit opt-in to nested animations.\n\nThis PR adds `parentEnter`/`parentExit`, and their handlers\n`onParentEnter`/`onParentExit`. When an ancestor runs a real `enter` or\n`exit`, React walks descendants and activates boundaries that define the\nnested props. This only continues through `<ViewTransition>` nodes that\ndefine `parentEnter` / `parentExit` / `onParentEnter` / `onParentExit` /\n`onGestureParentEnter` / `onGestureParentExit`, otherwise the chaining\nstops. A boundary’s own `enter`/`exit` still do not run when only an\nancestor animates. So it is possible to have different animations on the\nsame `<ViewTransition>` for `enter` vs `parentEnter`.\n\n```jsx\nfunction ExampleOnAncestorExit() {\n  return (\n    // This boundary exits — starts the parentExit walk\n    <ViewTransition exit=\"panel-exit\">\n      <div>\n        {/* ✓ Activates: parentExit set. Walk continues inside */}\n        <ViewTransition parentExit=\"slide-out\">\n          <div>\n            {/* ✗ parentEnter is not consulted on an exit walk */}\n            <ViewTransition parentEnter=\"slide-in\">\n              ...\n            </ViewTransition>\n            {/* ✗ Chain broken: no parentExit or onParentExit */}\n            <ViewTransition>\n              <div>\n                {/* ✗ Never reached on this path, blocked by parent above */}\n                <ViewTransition parentExit=\"slide-out\">\n                  ...\n                </ViewTransition>\n              </div>\n            </ViewTransition>\n            {/* ✓ Handler-only chain: onParentExit continues the walk */}\n            <ViewTransition onParentExit={() => animateOut()}>\n              <ViewTransition onParentExit={() => animateDeepOut()}>\n                ...\n              </ViewTransition>\n            </ViewTransition>\n            {/* ✓ Activates: sibling under the chain */}\n            <ViewTransition parentExit=\"slide-out\">\n              ...\n            </ViewTransition>\n          </div>\n        </ViewTransition>\n      </div>\n    </ViewTransition>\n  );\n}\n```",
+      "kind": "commit",
+      "author": {
+        "name": "Jack Pope",
+        "email": "jackpope1@gmail.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/8965173?v=4"
+      },
+      "authoredAt": "2026-07-01T16:16:12Z",
+      "committedAt": "2026-07-01T16:16:12Z",
+      "url": "https://github.com/react/react/commit/ec0fca31f419e821018fc67bc88f2ce62ffb2050"
+    },
+    {
+      "oid": "7df975a0c56de0e9d0d6d9c36a000185db58fc00",
+      "parents": [
+        "a1a6bc89742fbe8e1f9680a3051fdedc111fb378"
+      ],
+      "message": "[react-devtools-cdt-mcp] add chrome-devtools E2E coverage (#36823)\n\nA node runner that bootstraps `fixtures/app`, and then uses\n`chrome-devtools` CLI to test third-party tools.\n\n```\n$ node e2e/run.js\nStarting fixture at http://127.0.0.1:60033/\nStarting chrome-devtools daemon...\nChecking third-party tool discovery...\nChecking tree, details, search, and DOM lookup...\nChecking source, owners, and error payloads...\nChecking profiling through a real CLI click...\nreact-devtools-cdt-mcp E2E passed.\n✨  Done in 11.66s.\n```",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-07-01T15:02:36Z",
+      "committedAt": "2026-07-01T15:02:36Z",
+      "url": "https://github.com/react/react/commit/7df975a0c56de0e9d0d6d9c36a000185db58fc00"
+    },
+    {
+      "oid": "a1a6bc89742fbe8e1f9680a3051fdedc111fb378",
+      "parents": [
+        "c3555f0ca2648380ccd3d6af23479610e72f6bf1"
+      ],
+      "message": "[Fizz] Stop firing `onAllReady` after the shell errored (#36903)\n\nCo-authored-by: Claude Opus 4.7 <noreply@anthropic.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Sebastian \"Sebbie\" Silbermann",
+        "email": "sebastian.silbermann@vercel.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/12292047?v=4"
+      },
+      "authoredAt": "2026-07-01T10:07:32Z",
+      "committedAt": "2026-07-01T10:07:32Z",
+      "url": "https://github.com/react/react/commit/a1a6bc89742fbe8e1f9680a3051fdedc111fb378"
+    },
+    {
+      "oid": "c3555f0ca2648380ccd3d6af23479610e72f6bf1",
+      "parents": [
+        "2c8b73515961f005904a52dce943160991a0df13"
+      ],
+      "message": "Fix: Treat incomplete tree as an error during recovery (#36911)\n\nIn `recoverFromConcurrentError`, there's logic to determine if the\nlatest render attempt resulted in another error or if it completed\nsuccessfully, by checking whether the exit status matches RootErrored.\n\nThe logic was incomplete because RootSuspendedAtTheShell is also\nconsidered an errored state in this context. This can cause an\nincomplete tree (i.e. one that unwinds without entering the complete\nphase) to be mistaken for a complete one, leading to confusing errors.\nAn incomplete tree can never be committed because it's not guaranteed to\nrepresent a coherent state.\n\nAn example of how this can manifest as a bug: in #33580, an error caught\nby an error boundary triggers a synchronous recovery render. During that\nrender a parent component suspends on `use(thenable)` with no Suspense\nboundary above it, so the tree unwinds to the shell instead of\ncompleting. Because the incomplete tree is mistaken for a recovered one\nand committed, the parent fiber becomes current with a truncated hook\nlist — only the hooks it rendered before suspending. On the next render\nit calls the rest of its hooks and throws \"Rendered more hooks than\nduring the previous render.\"\n\nFixes #33580.\n\nCo-authored-by: Arunanshu Biswas\n<48434243+arunanshub@users.noreply.github.com>\n\nCo-authored-by: Arunanshu Biswas <48434243+arunanshub@users.noreply.github.com>",
+      "kind": "commit",
+      "author": {
+        "name": "Andrew Clark",
+        "email": "git@andrewclark.io",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/3624098?v=4"
+      },
+      "authoredAt": "2026-06-30T19:38:59Z",
+      "committedAt": "2026-06-30T19:38:59Z",
+      "url": "https://github.com/react/react/commit/c3555f0ca2648380ccd3d6af23479610e72f6bf1"
+    },
+    {
+      "oid": "2c8b73515961f005904a52dce943160991a0df13",
+      "parents": [
+        "e27313127e4b138bed374b2a931598ff42275620"
+      ],
+      "message": "[react-devtools-cdt-mcp] add DOM element component lookup (#36822)\n\nIntegrates newly added `getComponentByHostInstance` tool from\n`react-devtools-facade` into `react-devtools-cdt-mcp`.\n\nThe API uses `uid` of the element from CDT MCP tree snapshot, but under\nthe hood it gets converted to the DOM Element reference, which is\nexactly what we pass to `getComponentByHostInstance`.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-06-30T18:45:19Z",
+      "committedAt": "2026-06-30T18:45:19Z",
+      "url": "https://github.com/react/react/commit/2c8b73515961f005904a52dce943160991a0df13"
+    },
+    {
+      "oid": "e27313127e4b138bed374b2a931598ff42275620",
+      "parents": [
+        "d0d623d4c1ac02391a3bc97c8c0e8fee9cdfea2c"
+      ],
+      "message": "[react-devtools-facade] add host instance component lookup (#36820)\n\nAdds a new tool to the Facade, where the input is the `HostInstance` and\nthe output is the corresponding component payload for the `HostFiber` of\nthis `HostInstance`. Supports multiple Host objects from Fiber:\n`HostComponent`, `HostText`, `HostSingleton`, `HostHoistable`.\n\n> [!NOTE]\n> This doesn't bring much value now, because this returns the payload\nfor the corresponding HostFiber, not the closest user-defined Fiber.\nThis will be improved by adding a parentUid reference to the element\npayload, so the agent can crawl up through the component tree.",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-06-30T16:33:47Z",
+      "committedAt": "2026-06-30T16:33:47Z",
+      "url": "https://github.com/react/react/commit/e27313127e4b138bed374b2a931598ff42275620"
+    },
+    {
+      "oid": "d0d623d4c1ac02391a3bc97c8c0e8fee9cdfea2c",
+      "parents": [
+        "3a620bb78b2f6e39342099360324f0cd6ad6970e"
+      ],
+      "message": "[react-devtools-cdt-mcp] chrome-devtools-mcp integration (#36600)\n\n> [!NOTE]\n> I had to invalidate `node_modules` cache keys on CI, because we are\nnow using `react-devtools-facade` package and we need to create a\nsymlink to it, otherwise Flow will fail. We use a hash value of\n`yarn.lock`, but it's not invalidated when a package inside yarn\nworkspace is using another private package.\n\n---\n\nThis change introduces new `react-devtools-cdt-mcp` package, which is\nresponsible for installing React tools for `chrome-devtools-mcp` server.\nIt is using `react-devtools-facade` as a dependency: it doesn't own the\nimplementation of these tools, it just relays Facade's tools to\n`chrome-devtools-mcp` format.\n\nWhen CDT MCP navigates to a fresh page, it emits unique\n`devtoolsdiscovery` method, that has `respondWith` method, which is the\nintegration point between runtime libraries and MCP server.\n`react-devtools-cdt-mcp` is the owner for this integration. More details\nare available here -\nhttps://github.com/ChromeDevTools/chrome-devtools-mcp/blob/main/docs/third-party-developer-tools.md.\n\nHere is the list of tools that are being installed:\n- `react_get_component_tree`\n- `react_get_component_by_uid`\n- `react_find_components`\n- `react_get_component_source`\n- `react_get_owner_stack_trace`\n- `react_get_owner_stack`\n- `react_start_profiling`\n- `react_stop_profiling `\n- `react_get_trace_overview`\n- `react_get_commit_report`\n\n--- \nQuick demo how to test the package with `chrome-devtools-mcp` CLI. Steps\nare also mentioned in `README` file:\n\n\nhttps://github.com/user-attachments/assets/af9fefce-03f0-4ebd-a94f-e9dd72b87f4d",
+      "kind": "commit",
+      "author": {
+        "name": "Ruslan Lesiutin",
+        "email": "28902667+hoxyq@users.noreply.github.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/28902667?v=4"
+      },
+      "authoredAt": "2026-06-30T15:52:30Z",
+      "committedAt": "2026-06-30T15:52:30Z",
+      "url": "https://github.com/react/react/commit/d0d623d4c1ac02391a3bc97c8c0e8fee9cdfea2c"
+    },
+    {
+      "oid": "3a620bb78b2f6e39342099360324f0cd6ad6970e",
+      "parents": [
+        "82043d7de0ec4adb4f4703c298ac9af185862189"
+      ],
+      "message": "[compiler] Ensure builds use the current checkout's compiler (#36881)",
+      "kind": "commit",
+      "author": {
+        "name": "Sebastian \"Sebbie\" Silbermann",
+        "email": "sebastian.silbermann@vercel.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/12292047?v=4"
+      },
+      "authoredAt": "2026-06-30T15:03:13Z",
+      "committedAt": "2026-06-30T15:03:13Z",
+      "url": "https://github.com/react/react/commit/3a620bb78b2f6e39342099360324f0cd6ad6970e"
+    },
+    {
+      "oid": "82043d7de0ec4adb4f4703c298ac9af185862189",
+      "parents": [
+        "9c1f0977dba292db491dc88aa94b9c54769c47f6"
+      ],
+      "message": "[test] Use awaited `serverAct` to drive task loop (#36908)",
+      "kind": "commit",
+      "author": {
+        "name": "Sebastian \"Sebbie\" Silbermann",
+        "email": "sebastian.silbermann@vercel.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/12292047?v=4"
+      },
+      "authoredAt": "2026-06-30T14:36:12Z",
+      "committedAt": "2026-06-30T14:36:12Z",
+      "url": "https://github.com/react/react/commit/82043d7de0ec4adb4f4703c298ac9af185862189"
+    },
+    {
+      "oid": "9c1f0977dba292db491dc88aa94b9c54769c47f6",
+      "parents": [
+        "d4e44545a984186fc97783e130896e9c2e5c1a63"
+      ],
+      "message": "[compiler] Restore code frames in ESLint compiler error messages (#36901)\n\n## Summary\n\nThe Rust port (#36173) changed `CompileError` `LoggerEvent`s to carry\nplain serialized detail objects instead of\n`CompilerError`/`CompilerDiagnostic` class instances. As a result, the\nESLint integrations could no longer call\n`detail.printErrorMessage(source, {eslint: true})` and were given a\nreplacement `printErrorMessage()` helper that only emitted the `reason`\nand `description`.\n\nThis regressed error printing: the **source code frame(s) and\n`file:line:column` location** that used to appear for each error detail\nwere dropped from lint output.\n\nThis PR restores the previous behaviour:\n\n- Export `printCodeFrame` from `CompilerError` and reuse it from both\nESLint integrations instead of duplicating it.\n- Rebuild the full message (reason, description, per-detail code frames,\nand hints) in `printErrorMessage`.\n- Handle **both** detail shapes that flow through `LoggerEvent`s:\n- a `details` array (`CompilerDiagnostic` and the **Rust** compiler),\nand\n  - a legacy flat `loc` (deprecated `CompilerErrorDetail`).\n\n`formatDetailForLogging` emits one or the other, so the previous\nunconditional iteration over `error.details` would have thrown\n`TypeError: not iterable` on the flat-`loc` path. Normalizing to a list\nfixes that and keeps the code working with both the TypeScript and Rust\ncompilers.\n\n## Test plan\n\n- `tsc --noEmit` on both ESLint packages is clean (no new errors vs.\nbaseline).\n- Verified the detail loop handles the Rust compiler's `details` array\nshape and the legacy flat `loc` shape.",
+      "kind": "commit",
+      "author": {
+        "name": "Pieter De Baets",
+        "email": "pieterdb@meta.com",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/5676?v=4"
+      },
+      "authoredAt": "2026-06-30T09:20:26Z",
+      "committedAt": "2026-06-30T09:20:26Z",
+      "url": "https://github.com/react/react/commit/9c1f0977dba292db491dc88aa94b9c54769c47f6"
+    }
+  ],
+  "refs": [
+    {
+      "name": "main",
+      "target": "7dfc7ccd12d0294debc69b9b9b4e9dd1fd42e08a",
+      "kind": "current",
+      "url": "https://github.com/react/react/tree/main"
+    },
+    {
+      "name": "refs/heads/main",
+      "target": "7dfc7ccd12d0294debc69b9b9b4e9dd1fd42e08a",
+      "kind": "head",
+      "url": "https://github.com/react/react/tree/main"
+    },
+    {
+      "name": "refs/heads/cdt-mcp/base",
+      "target": "7023f501b644815e29a621875c0379ea757905f6",
+      "kind": "head",
+      "url": "https://github.com/react/react/tree/cdt-mcp%2Fbase"
+    },
+    {
+      "name": "refs/tags/v19.2.8",
+      "target": "1dd4ecbdabf826f527fc9a58c05ea70375b7d170",
+      "kind": "tag",
+      "url": "https://github.com/react/react/releases/tag/v19.2.8"
+    },
+    {
+      "name": "refs/tags/v19.2.7",
+      "target": "6117d7cca4906492c51fe6a03381e35adfd86e7d",
+      "kind": "tag",
+      "url": "https://github.com/react/react/releases/tag/v19.2.7"
+    },
+    {
+      "name": "refs/tags/v19.2.6",
+      "target": "eaf3e95ca92be7a23d3c9cc8ffd6f199a40be401",
+      "kind": "tag",
+      "url": "https://github.com/react/react/releases/tag/v19.2.6"
+    },
+    {
+      "name": "refs/tags/v19.2.5",
+      "target": "23f4f9f30da9e9af2108c18bb197bae75ab584ea",
+      "kind": "tag",
+      "url": "https://github.com/react/react/releases/tag/v19.2.5"
+    },
+    {
+      "name": "refs/tags/v19.2.4",
+      "target": "90ab3f89f4824ac763b6f877c6f711200d1338d2",
+      "kind": "tag",
+      "url": "https://github.com/react/react/releases/tag/v19.2.4"
+    },
+    {
+      "name": "refs/tags/v19.2.3",
+      "target": "612e371fb215498edde4c853bd1e0c8e9203808f",
+      "kind": "tag",
+      "url": "https://github.com/react/react/releases/tag/v19.2.3"
+    },
+    {
+      "name": "refs/tags/v19.2.2",
+      "target": "b910fc15e38d4fa80003819ddb7a928a3c3dca5d",
+      "kind": "tag",
+      "url": "https://github.com/react/react/releases/tag/v19.2.2"
+    },
+    {
+      "name": "refs/tags/v19.2.1",
+      "target": "053df4e8561ef4caecef31c330f4178ac25e255b",
+      "kind": "tag",
+      "url": "https://github.com/react/react/releases/tag/v19.2.1"
+    },
+    {
+      "name": "refs/tags/v19.2.0",
+      "target": "ae74234eae6ebd62f19190731278e20bc1c37d51",
+      "kind": "tag",
+      "url": "https://github.com/react/react/releases/tag/v19.2.0"
+    },
+    {
+      "name": "refs/tags/v19.1.9",
+      "target": "642ce6de910fe651c6f75517095e9881635098c0",
+      "kind": "tag",
+      "url": "https://github.com/react/react/releases/tag/v19.1.9"
+    },
+    {
+      "name": "refs/tags/v19.1.8",
+      "target": "27de93c4a5a824198d089b12ab4a33dca50286fe",
+      "kind": "tag",
+      "url": "https://github.com/react/react/releases/tag/v19.1.8"
+    },
+    {
+      "name": "refs/tags/v19.1.7",
+      "target": "a6581653f0f5e436d68aa2df845b342a2fd777a3",
+      "kind": "tag",
+      "url": "https://github.com/react/react/releases/tag/v19.1.7"
+    }
+  ],
+  "head": "7dfc7ccd12d0294debc69b9b9b4e9dd1fd42e08a",
+  "hasMore": false,
+  "repositoryId": "react/react",
+  "repositoryName": "react/react"
+}

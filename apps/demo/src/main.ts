@@ -3,12 +3,10 @@ import "@fontsource-variable/recursive";
 import "@web-git-graph/web/register";
 import { GitHubGitGraphProvider } from "@web-git-graph/web/providers/github";
 import { HttpGitGraphProvider } from "@web-git-graph/web/providers/http";
-import type {
-  GitGraphCommit,
-  GitGraphPage,
-  GitGraphRef
-} from "@web-git-graph/protocol";
+import type { GitGraphPage } from "@web-git-graph/protocol";
+import { GitGraphProtocolError } from "@web-git-graph/protocol";
 import type { WebGitGraphElement } from "@web-git-graph/web";
+import historyFixture from "./history-fixture.json";
 import { initPage } from "./page";
 import "./style.css";
 
@@ -17,7 +15,10 @@ type StatusState =
   | { kind: "connecting"; repository: string }
   | { kind: "connected"; backend: string; repository: string }
   | { kind: "tip" }
+  | { kind: "rateLimited" }
   | { kind: "error"; message: string };
+
+const TOKEN_KEY = "web-git-graph.demo.github-token";
 
 const messages = {
   en: {
@@ -44,7 +45,9 @@ const messages = {
     "demo.history": "Repository history",
     "demo.repoLabel": "GitHub repository",
     "demo.load": "Load",
-    "demo.statusFixture": "Showing fixture data. Enter a public repository to load live history.",
+    "demo.tokenLabel": "GitHub token (optional)",
+    "demo.tokenPlaceholder": "Paste a token if GitHub rate-limits you — stored only in this tab",
+    "demo.statusFixture": "Showing sample history from react/react (offline snapshot). Load a public repository for live data.",
     "how.kicker": "How it works",
     "how.title": "Swap the data. Keep the UI.",
     "how.description": "The component talks to one small provider interface. Change where the commits come from — the layout and interactions stay identical.",
@@ -85,11 +88,12 @@ const messages = {
     "footer.tagline": "Framework-free Git history for the web.",
     "common.copy": "Copy",
     "common.copied": "Copied",
-    "status.fixture": "Showing fixture data. Enter a public repository to load live history.",
+    "status.fixture": "Showing sample history from react/react (offline snapshot). Load a public repository for live data.",
     "status.connecting": "Connecting to github.com/{repository}…",
     "status.connected": "Connected to {backend} · repository {repository}",
     "status.tip": "Tip: Ctrl/Cmd-click another commit to compare. Double-click to open it on GitHub.",
-    "status.error": "GitHub API: {message}"
+    "status.error": "GitHub API: {message}",
+    "status.rateLimited": "Rate limit reached (unauthenticated GitHub API allows 60 requests/hour per IP). Paste a personal access token above to continue — classic token with public_repo is enough, and it stays in this tab only."
   },
   zh: {
     "nav.demo": "在线演示",
@@ -115,7 +119,9 @@ const messages = {
     "demo.history": "仓库历史",
     "demo.repoLabel": "GitHub 仓库",
     "demo.load": "载入",
-    "demo.statusFixture": "当前展示示例数据。输入公开仓库即可载入实时历史。",
+    "demo.tokenLabel": "GitHub token（可选）",
+    "demo.tokenPlaceholder": "若触发 GitHub 限流请粘贴 token——仅保存在本标签页",
+    "demo.statusFixture": "当前展示 react/react 的离线示例历史。输入公开仓库可载入实时数据。",
     "how.kicker": "工作原理",
     "how.title": "换掉数据源,界面不变。",
     "how.description": "组件只依赖一个很小的 Provider 接口。无论提交来自哪里,布局和交互都保持一致。",
@@ -154,20 +160,23 @@ const messages = {
     "closing.demo": "打开在线演示",
     "closing.github": "在 GitHub 查看 ↗",
     "footer.tagline": "为 Web 而生的零框架 Git 历史图。",
-    "common.copy": "复制",
-    "common.copied": "已复制",
-    "status.fixture": "当前展示示例数据。输入公开仓库即可载入实时历史。",
+    "common.copy": "Copy",
+    "common.copied": "Copied",
+    "status.fixture": "当前展示 react/react 的离线示例历史。输入公开仓库可载入实时数据。",
     "status.connecting": "正在连接 github.com/{repository}…",
     "status.connected": "已连接 {backend} · 仓库 {repository}",
     "status.tip": "提示:按住 Ctrl/Cmd 选择另一个提交进行比较;双击可在 GitHub 打开。",
-    "status.error": "GitHub API:{message}"
+    "status.error": "GitHub API:{message}",
+    "status.rateLimited": "已触发速率限制（未认证 GitHub API 每个 IP 每小时仅 60 次）。请在上方粘贴 personal access token 后重试——classic 勾选 public_repo 即可，token 仅保存在本标签页。"
   }
 };
 
 const graph = document.querySelector<WebGitGraphElement>("#graph")!;
 const form = document.querySelector<HTMLFormElement>("#repo-form")!;
 const repositoryInput = document.querySelector<HTMLInputElement>("#repository")!;
+const tokenInput = document.querySelector<HTMLInputElement>("#github-token")!;
 const status = document.querySelector<HTMLElement>("#status")!;
+const statusLine = document.querySelector<HTMLElement>(".status-line")!;
 
 let statusState: StatusState = { kind: "fixture" };
 
@@ -183,39 +192,10 @@ const page = initPage({
   }
 });
 
-const commits: GitGraphCommit[] = [
-  commit("a91de840", ["3f18d220", "be901ad0"], "Merge release/0.1 into main", "Mira Chen", "2026-07-27T08:18:00Z"),
-  commit("3f18d220", ["86d41b10"], "docs: publish the protocol contract", "Mira Chen", "2026-07-27T07:48:00Z"),
-  commit("be901ad0", ["7ae22f40", "42fb4110"], "Merge provider adapters", "Noah Kim", "2026-07-27T07:22:00Z"),
-  commit("7ae22f40", ["86d41b10"], "feat(node): stream local commit objects", "Noah Kim", "2026-07-27T06:52:00Z"),
-  commit("42fb4110", ["581b7c70"], "feat(web): add compare drawer", "Ari Santos", "2026-07-27T06:31:00Z"),
-  commit("581b7c70", ["86d41b10"], "style: tune angular lane transitions", "Ari Santos", "2026-07-27T05:44:00Z"),
-  commit("86d41b10", ["f10539a0"], "refactor: isolate layout state", "Mira Chen", "2026-07-26T17:13:00Z"),
-  commit("f10539a0", ["8d68e2b0", "1ca829d0"], "Merge GitHub history loader", "Mira Chen", "2026-07-26T15:56:00Z"),
-  commit("1ca829d0", ["ef7712c0"], "feat: preserve lanes across pages", "Noah Kim", "2026-07-26T15:12:00Z"),
-  commit("8d68e2b0", ["ef7712c0"], "test: generate adversarial commit DAGs", "Ari Santos", "2026-07-26T14:38:00Z"),
-  commit("ef7712c0", [], "Initial graph model", "Mira Chen", "2026-07-26T10:00:00Z")
-];
-
-const refs: GitGraphRef[] = [
-  { name: "main", target: "a91de840", kind: "current" },
-  { name: "refs/heads/main", target: "a91de840", kind: "head" },
-  { name: "refs/heads/node-provider", target: "7ae22f40", kind: "head" },
-  { name: "refs/heads/ui-compare", target: "42fb4110", kind: "head" },
-  { name: "refs/tags/v0.1.0-rc.1", target: "3f18d220", kind: "tag" }
-];
-
-const fixture: GitGraphPage = {
-  commits,
-  refs,
-  head: "a91de840",
-  hasMore: false,
-  repositoryId: "fixture",
-  repositoryName: "web-git-graph / protocol-lab"
-};
-
+const fixture = historyFixture as GitGraphPage;
 graph.data = fixture;
 graph.theme = page.theme;
+tokenInput.value = sessionStorage.getItem(TOKEN_KEY) ?? "";
 renderStatus();
 
 const query = new URLSearchParams(window.location.search);
@@ -234,16 +214,33 @@ form.addEventListener("submit", (event) => {
   event.preventDefault();
   const repository = repositoryInput.value.trim();
   if (!repository) return;
-  const normalized = repository.replace(/^https?:\/\/github.com\//, "");
+  const normalized = repository.replace(/^https?:\/\/github.com\//i, "").replace(/\.git$/, "");
+  const token = tokenInput.value.trim();
+  if (token) sessionStorage.setItem(TOKEN_KEY, token);
+  else sessionStorage.removeItem(TOKEN_KEY);
+
   statusState = { kind: "connecting", repository: normalized };
   renderStatus();
-  graph.provider = new GitHubGitGraphProvider({ repository, pageSize: 80 });
+  graph.provider = new GitHubGitGraphProvider({
+    repository: normalized,
+    pageSize: 80,
+    ...(token ? { token } : {})
+  });
   graph.addEventListener(
     "gitgraph-error",
     (error) => {
-      const message = error.detail.error instanceof Error ? error.detail.error.message : String(error.detail.error);
-      statusState = { kind: "error", message };
+      const raw = error.detail.error;
+      const message = raw instanceof Error ? raw.message : String(raw);
+      statusState =
+        (raw instanceof GitGraphProtocolError && raw.code === "rate_limited") ||
+        /rate limit/i.test(message)
+          ? { kind: "rateLimited" }
+          : { kind: "error", message };
       renderStatus();
+      if (statusState.kind === "rateLimited") {
+        tokenInput.focus();
+        tokenInput.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
     },
     { once: true }
   );
@@ -253,6 +250,12 @@ form.addEventListener("submit", (event) => {
       renderStatus();
     }
   }, 900);
+});
+
+tokenInput.addEventListener("change", () => {
+  const token = tokenInput.value.trim();
+  if (token) sessionStorage.setItem(TOKEN_KEY, token);
+  else sessionStorage.removeItem(TOKEN_KEY);
 });
 
 const tabs = document.querySelectorAll<HTMLButtonElement>("[data-tab]");
@@ -267,6 +270,7 @@ tabs.forEach((tab) => {
 });
 
 function renderStatus(): void {
+  statusLine.dataset.state = statusState.kind;
   if (statusState.kind === "fixture") {
     status.textContent = page.t("status.fixture");
   } else if (statusState.kind === "connecting") {
@@ -278,17 +282,9 @@ function renderStatus(): void {
     });
   } else if (statusState.kind === "tip") {
     status.textContent = page.t("status.tip");
+  } else if (statusState.kind === "rateLimited") {
+    status.textContent = page.t("status.rateLimited");
   } else {
     status.textContent = page.t("status.error", { message: statusState.message });
   }
-}
-
-function commit(
-  oid: string,
-  parents: string[],
-  message: string,
-  name: string,
-  committedAt: string
-): GitGraphCommit {
-  return { oid, parents, message, author: { name }, committedAt, kind: "commit" };
 }
