@@ -17,6 +17,14 @@
   · <a href="./SECURITY.md">Security</a>
 </p>
 
+<p align="center">
+  <img
+    src="./docs/assets/web-git-graph-preview.jpg"
+    alt="Web Git Graph commit history preview"
+    width="900"
+  />
+</p>
+
 ---
 
 <a id="english"></a>
