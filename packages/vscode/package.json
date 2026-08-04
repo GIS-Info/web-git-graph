@@ -1,7 +1,7 @@
 {
   "name": "web-git-graph",
   "displayName": "Web Git Graph",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Read-only Git history graph with deterministic lanes, commit details and revision diffs.",
   "type": "module",
   "license": "MIT",
@@ -28,7 +28,9 @@
     "git graph",
     "git history",
     "git log",
-    "scm"
+    "scm",
+    "coding-agent",
+    "webview"
   ],
   "extensionKind": [
     "workspace"

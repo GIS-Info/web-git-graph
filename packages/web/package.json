@@ -1,7 +1,7 @@
 {
   "name": "@web-git-graph/web",
-  "version": "1.0.5",
-  "description": "Framework-free Git history graph Web Component and browser providers.",
+  "version": "1.0.6",
+  "description": "Framework-free Git history graph Web Component for coding-agent UIs, IDE webviews, and browsers — lanes, search, compare, and pluggable providers.",
   "type": "module",
   "license": "MIT",
   "author": "kian-zh",
@@ -11,6 +11,20 @@
     "url": "git+https://github.com/GIS-Info/web-git-graph.git",
     "directory": "packages/web"
   },
+  "keywords": [
+    "git",
+    "git-graph",
+    "git-history",
+    "commit-history",
+    "web-component",
+    "lane-layout",
+    "coding-agent",
+    "agent-ui",
+    "devtools",
+    "vscode-webview",
+    "github",
+    "diff"
+  ],
   "sideEffects": [
     "./dist/register.js"
   ],

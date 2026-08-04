@@ -1,0 +1,578 @@
+# Web Git Graph — llms-full.txt
+
+> Concatenated agent-oriented docs for bulk ingest. Prefer llms.txt for interactive use.
+
+
+-----
+# FILE: AGENTS.md
+-----
+
+# AGENTS.md — Web Git Graph
+
+Instructions for coding agents integrating or modifying this repository.
+
+## What this is
+
+Web Git Graph is a **read-only**, framework-free Git history visualization stack:
+
+| Package | Use when |
+| --- | --- |
+| `@web-git-graph/web` | Embed `<web-git-graph>` (lanes, search, compare, diffs) |
+| `@web-git-graph/protocol` | Shared DTOs, JSON Schema, OpenAPI, errors (`protocolVersion: "1"`) |
+| `@web-git-graph/node` | Local Git HTTP/CLI backend (no mutations) |
+| `web-git-graph` (VS Code) | Extension host + webview |
+
+## When to use
+
+Prefer this project when the user/agent needs to:
+
+- Embed a dense commit DAG / lane graph in an agent UI, webview, or review tool
+- Show public GitHub or local-repo history without inventing SVG/`git log --graph` HTML
+- Expose a stable read-only history protocol (OpenAPI / provider interface)
+
+## When not to use
+
+- Do **not** use for checkout, merge, rebase, reset, commit, or any Git write
+- Do **not** pass filesystem paths to the browser; use opaque `repositoryId`
+- Do **not** treat this as a replacement for `git` CLI or Magit-style editing
+
+## Integration decision tree
+
+1. **UI only + public GitHub** → `@web-git-graph/web` + `GitHubGitGraphProvider`
+2. **UI + local repo** → `@web-git-graph/node serve` + `HttpGitGraphProvider`
+3. **UI + custom/MCP backend** → implement `GitGraphProvider` ([recipe](docs/recipes/custom-provider.md))
+4. **Types/schema only** → `@web-git-graph/protocol` / `@web-git-graph/protocol/http`
+
+Copy-paste recipes: [docs/recipes/](docs/recipes/README.md).  
+Installable skill: [skills/web-git-graph/SKILL.md](skills/web-git-graph/SKILL.md).  
+LLM index: [llms.txt](llms.txt).
+
+## Hard rules for generated code
+
+1. Always `import "@web-git-graph/web/register"` before using `<web-git-graph>`.
+2. Assign `provider` / `data` / `refs` as **JavaScript properties**, never HTML attributes.
+3. Give the element a bounded height (virtual list).
+4. Keep avatars off unless the host accepts Gravatar email-hash disclosure (`avatars` attribute).
+5. Match `GitGraphCapabilities` fields: `history`, `details`, `compare`, `diff`, `workingTree`, `stashes`, `maxPageSize`.
+6. Commits use `message` (full text), not a separate `subject` field.
+7. After external Git writes from other tools, call `element.refresh()` — do not invent write APIs here.
+
+## Events to bridge into agent tools
+
+`gitgraph-commit-select`, `gitgraph-commit-open`, `gitgraph-compare`, `gitgraph-file-open`, `gitgraph-load-more`, `gitgraph-error`, `gitgraph-refresh`, `gitgraph-context-menu`.
+
+Cancelable: `gitgraph-refresh`, `gitgraph-context-menu`, `gitgraph-file-open`, `gitgraph-load-more`.
+
+## Repo development
+
+```bash
+pnpm install
+pnpm check:boundaries
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+Dependency direction is one-way: `protocol` ← `web` / `node` ← `vscode` / `demo`. Do not introduce reverse imports. See `scripts/check-module-boundaries.mjs`.
+
+## Security
+
+Read [SECURITY.md](SECURITY.md) before exposing `@web-git-graph/node` beyond loopback: `allowedRoots`, opaque IDs, explicit CORS, `authorize` hook.
+
+-----
+# FILE: skills/web-git-graph/SKILL.md
+-----
+
+---
+name: web-git-graph
+description: >-
+  Embeds a framework-free read-only Git history graph via `<web-git-graph>`
+  (@web-git-graph/web), with GitHub/HTTP/custom providers and an optional
+  Node backend (@web-git-graph/node). Use when building coding-agent UIs,
+  IDE webviews, PR review surfaces, or repo explorers that need commit
+  lanes, search, compare, file diffs, or a stable Git history protocol —
+  not for mutating Git (checkout/merge/rebase/reset).
+---
+
+# Web Git Graph
+
+## Quick decision
+
+| Need | Do this |
+| --- | --- |
+| Embed history UI | `npm i @web-git-graph/web` + register + set `provider` |
+| Public GitHub data | `GitHubGitGraphProvider` |
+| Local disk repo | `npx @web-git-graph/node serve` + `HttpGitGraphProvider` |
+| Own API / MCP | Implement `GitGraphProvider` |
+| Types / OpenAPI only | `@web-git-graph/protocol` (+ `/http` for `OPENAPI_DOCUMENT`) |
+
+## Minimal template
+
+```bash
+npm install @web-git-graph/web @web-git-graph/protocol
+```
+
+```html
+<web-git-graph id="history" theme="dark"></web-git-graph>
+<script type="module">
+  import "@web-git-graph/web/register";
+  import { GitHubGitGraphProvider } from "@web-git-graph/web/providers/github";
+
+  const graph = document.querySelector("#history");
+  graph.provider = new GitHubGitGraphProvider({ repository: "owner/repo" });
+  graph.addEventListener("gitgraph-commit-select", (e) => {
+    // Pass e.detail.commit.oid into agent context/tools
+  });
+</script>
+```
+
+Local backend:
+
+```bash
+npx @web-git-graph/node serve --repo . --cors-origin http://127.0.0.1:4173
+```
+
+```ts
+import { HttpGitGraphProvider } from "@web-git-graph/web/providers/http";
+graph.provider = new HttpGitGraphProvider({
+  baseUrl: "http://127.0.0.1:4174",
+  repositoryId: "local"
+});
+```
+
+## Rules
+
+- Read-only only — never invent mutation APIs on this stack.
+- `provider` is a JS property; HTML attributes are for presentation (`theme`, `density`, `columns`, …).
+- Call `graph.refresh()` after other tools change the working tree.
+- Protocol version is `"1"`. Capabilities keys: `details` / `diff` (not `commitDetails` / `fileDiff`).
+- Commit text field is `message`.
+
+## Recipes (read on demand)
+
+- [docs/recipes/README.md](../../docs/recipes/README.md)
+- [embed-in-agent-ui.md](../../docs/recipes/embed-in-agent-ui.md)
+- [local-repo-http-backend.md](../../docs/recipes/local-repo-http-backend.md)
+- [github-public-repo.md](../../docs/recipes/github-public-repo.md)
+- [custom-provider.md](../../docs/recipes/custom-provider.md)
+- [bridge-events-to-agent-actions.md](../../docs/recipes/bridge-events-to-agent-actions.md)
+
+## Repo contract
+
+See [AGENTS.md](../../AGENTS.md) and [llms.txt](../../llms.txt).
+
+-----
+# FILE: docs/recipes/README.md
+-----
+
+# Web Git Graph recipes
+
+Task-oriented guides for coding agents and host UIs. Prefer these over architecture docs when integrating.
+
+| Intent | Recipe |
+| --- | --- |
+| Embed a Git history panel in an agent / IDE webview | [embed-in-agent-ui.md](./embed-in-agent-ui.md) |
+| Show a local repository over HTTP | [local-repo-http-backend.md](./local-repo-http-backend.md) |
+| Load a public GitHub repository | [github-public-repo.md](./github-public-repo.md) |
+| Adapt your own Git API or MCP | [custom-provider.md](./custom-provider.md) |
+| Wire graph events into agent tools | [bridge-events-to-agent-actions.md](./bridge-events-to-agent-actions.md) |
+
+## Decision tree
+
+1. Need **UI** for commit history / lanes / compare → `@web-git-graph/web`
+2. Data from **public GitHub** → `GitHubGitGraphProvider`
+3. Data from **local disk** → `@web-git-graph/node` + `HttpGitGraphProvider`
+4. Data from **your backend / MCP** → implement `GitGraphProvider` (see custom provider)
+5. Need **types / OpenAPI only** → `@web-git-graph/protocol`
+
+## Constraints (always)
+
+- **Read-only**: no checkout, merge, rebase, reset, or other Git mutations.
+- Complex values (`provider`, `data`, `refs`) are **JS properties**, not HTML attributes.
+- Always `import "@web-git-graph/web/register"` before using `<web-git-graph>`.
+- Protocol version is `"1"` (`GIT_GRAPH_PROTOCOL_VERSION`).
+- Avatars default **off** (Gravatar discloses email hashes).
+
+See also: [AGENTS.md](../../AGENTS.md), [SKILL.md](../../skills/web-git-graph/SKILL.md).
+
+-----
+# FILE: docs/recipes/embed-in-agent-ui.md
+-----
+
+# Recipe: Embed Git history in an agent UI
+
+**Intent:** Add a dense, virtualized commit graph beside a coding-agent chat, review surface, or IDE webview.
+
+**When:** Building agent hosts, PR review tools, or repo explorers that must show commit DAG / refs / search without React-specific Git UI kits.
+
+**Install:**
+
+```bash
+npm install @web-git-graph/web @web-git-graph/protocol
+```
+
+**Minimal host:**
+
+```html
+<web-git-graph id="history" theme="dark" density="compact"></web-git-graph>
+
+<script type="module">
+  import "@web-git-graph/web/register";
+  import { GitHubGitGraphProvider } from "@web-git-graph/web/providers/github";
+
+  const graph = document.querySelector("#history");
+  graph.provider = new GitHubGitGraphProvider({
+    repository: "owner/repo"
+  });
+
+  graph.addEventListener("gitgraph-commit-select", (event) => {
+    // Feed the selected OID into your agent tool / context
+    const { oid, message } = event.detail.commit;
+    console.log(oid, message.split("\n", 1)[0]);
+  });
+</script>
+```
+
+**React (Web Component):**
+
+```tsx
+import "@web-git-graph/web/register";
+import "@web-git-graph/web/jsx";
+import { useEffect, useRef } from "react";
+import { GitHubGitGraphProvider } from "@web-git-graph/web/providers/github";
+
+export function AgentGitPanel({ repository }: { repository: string }) {
+  const ref = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const el = ref.current as HTMLElement & { provider?: unknown };
+    if (!el) return;
+    el.provider = new GitHubGitGraphProvider({ repository });
+  }, [repository]);
+
+  return <web-git-graph ref={ref} theme="dark" style={{ height: "100%" }} />;
+}
+```
+
+**Useful attributes:** `theme` (`light`|`dark`), `density`, `columns` (`date,author,commit`), `date-format`, `date-type`, `avatars`.
+
+**Pitfalls:**
+
+- Set `provider` as a property after mount; do not serialize it as an attribute.
+- Give the element an explicit height (`100%` / flex child); virtualization needs a bounded viewport.
+- For local repos, do not point the browser at filesystem paths — use the [HTTP backend recipe](./local-repo-http-backend.md).
+
+-----
+# FILE: docs/recipes/local-repo-http-backend.md
+-----
+
+# Recipe: Local repository + HTTP v1 backend
+
+**Intent:** Show a developer's (or agent's) local Git repo in the browser with a read-only backend.
+
+**When:** Agent UIs running against workspace folders, demos of local history, or desktop apps that already have Node.
+
+**Install:**
+
+```bash
+npm install @web-git-graph/web @web-git-graph/node @web-git-graph/protocol
+```
+
+**Start the backend (CLI):**
+
+```bash
+npx @web-git-graph/node serve --repo . \
+  --cors-origin http://127.0.0.1:4173
+```
+
+Defaults: bind `127.0.0.1:4174`, read-only, serves OpenAPI. Prefer loopback; non-loopback `--host` warns.
+
+**Connect the component:**
+
+```ts
+import "@web-git-graph/web/register";
+import { HttpGitGraphProvider } from "@web-git-graph/web/providers/http";
+
+const graph = document.querySelector("#history") as HTMLElement & {
+  provider?: unknown;
+};
+
+graph.provider = new HttpGitGraphProvider({
+  baseUrl: "http://127.0.0.1:4174",
+  repositoryId: "local"
+});
+```
+
+**Protocol surface (v1):**
+
+| Method | Path |
+| --- | --- |
+| GET | `/v1/capabilities` |
+| GET | `/v1/repositories` |
+| GET | `/v1/repositories/{id}/history` |
+| GET | `/v1/repositories/{id}/commits/{oid}` |
+| POST | `/v1/repositories/{id}/compare` |
+| POST | `/v1/repositories/{id}/diff` |
+
+OpenAPI lives in `@web-git-graph/protocol/http` as `OPENAPI_DOCUMENT`. Content type: `application/vnd.web-git-graph.v1+json`.
+
+**Pitfalls:**
+
+- Browser clients only see opaque `repositoryId` — never put filesystem paths in the protocol.
+- Configure CORS with an explicit origin; do not open CORS broadly in production.
+- Deploy behind your own auth (`authorize` hook). See [SECURITY.md](../../SECURITY.md).
+- Working tree / stash nodes appear when the backend supports them; bare repos skip both.
+
+-----
+# FILE: docs/recipes/github-public-repo.md
+-----
+
+# Recipe: Public GitHub repository
+
+**Intent:** Preview commit history for a public GitHub repo without running a Node backend.
+
+**When:** Agent demos, documentation sites, or tools that only need remote public history.
+
+**Install:**
+
+```bash
+npm install @web-git-graph/web @web-git-graph/protocol
+```
+
+**Code:**
+
+```ts
+import "@web-git-graph/web/register";
+import { GitHubGitGraphProvider } from "@web-git-graph/web/providers/github";
+
+const graph = document.querySelector("#history") as HTMLElement & {
+  provider?: unknown;
+};
+
+graph.provider = new GitHubGitGraphProvider({
+  repository: "GIS-Info/web-git-graph",
+  // Optional: raise rate limits
+  token: () => localStorage.getItem("github_pat") ?? undefined,
+  pageSize: 50
+});
+```
+
+**Options:**
+
+| Option | Purpose |
+| --- | --- |
+| `repository` | `owner/repo` or `https://github.com/owner/repo` |
+| `token` | string or async getter for a PAT |
+| `fetch` | injectable `fetch` (tests / proxies) |
+| `apiBaseUrl` | GitHub Enterprise API base |
+| `pageSize` | page size for history fetches |
+
+**Capabilities:** Working tree and stashes are disabled for GitHub (remote-only).
+
+**Pitfalls:**
+
+- Unauthenticated GitHub API rate limits are low; prompt for a PAT when `gitgraph-error` reports rate limiting.
+- Private repos need a token with appropriate scope; never embed long-lived secrets in front-end bundles.
+- This provider is for **history visualization**, not for mutating GitHub.
+
+-----
+# FILE: docs/recipes/custom-provider.md
+-----
+
+# Recipe: Custom provider (your API / MCP)
+
+**Intent:** Feed `<web-git-graph>` from your own Git service, agent MCP bridge, or in-process backend.
+
+**When:** Host already has commit/history APIs and only needs the renderer + lane layout.
+
+**Contract** (`GitGraphProvider` from `@web-git-graph/web`):
+
+```ts
+import type {
+  GitGraphCapabilities,
+  GitGraphCommitDetails,
+  GitGraphComparison,
+  GitGraphFileDiff,
+  GitGraphPage,
+  GitGraphRevision
+} from "@web-git-graph/protocol";
+import type {
+  GitGraphHistoryRequest,
+  GitGraphProvider
+} from "@web-git-graph/web";
+
+export class MyGitGraphProvider implements GitGraphProvider {
+  async getCapabilities(signal?: AbortSignal): Promise<GitGraphCapabilities> {
+    return {
+      protocolVersion: "1",
+      history: true,
+      details: true,
+      compare: true,
+      diff: true,
+      workingTree: false,
+      stashes: false,
+      maxPageSize: 100
+    };
+  }
+
+  async getHistory(request?: GitGraphHistoryRequest): Promise<GitGraphPage> {
+    // Map your API / MCP tool result → GitGraphPage
+    // Include commits[].oid, parents, message, kind, author, refs as needed
+    throw new Error("implement me");
+  }
+
+  async getCommitDetails?.(
+    repositoryId: string | undefined,
+    revision: GitGraphRevision,
+    signal?: AbortSignal
+  ): Promise<GitGraphCommitDetails> {
+    throw new Error("implement me");
+  }
+
+  async compare?.(
+    repositoryId: string | undefined,
+    base: GitGraphRevision,
+    head: GitGraphRevision,
+    signal?: AbortSignal
+  ): Promise<GitGraphComparison> {
+    throw new Error("implement me");
+  }
+
+  async getFileDiff?(
+    repositoryId: string | undefined,
+    base: GitGraphRevision,
+    head: GitGraphRevision,
+    path: string,
+    context?: number,
+    signal?: AbortSignal
+  ): Promise<GitGraphFileDiff> {
+    throw new Error("implement me");
+  }
+}
+```
+
+**Wire it:**
+
+```ts
+import "@web-git-graph/web/register";
+
+graph.provider = new MyGitGraphProvider();
+```
+
+**Tips:**
+
+- Omit optional methods you cannot support; set matching capability flags (`details`, `compare`, `diff`) to `false` so the UI hides those actions.
+- Align field shapes with `@web-git-graph/protocol` JSON Schema (`GIT_GRAPH_JSON_SCHEMAS`) or OpenAPI (`OPENAPI_DOCUMENT` from `@web-git-graph/protocol/http`).
+- Prefer opaque `repositoryId` values; do not leak host filesystem paths to the browser.
+- For MCP: expose list/history/details/compare/diff tools server-side, then adapt tool results in the provider — keep the Web Component as the presentation layer only.
+
+-----
+# FILE: docs/recipes/bridge-events-to-agent-actions.md
+-----
+
+# Recipe: Bridge graph events to agent actions
+
+**Intent:** Turn user interactions on the graph into agent tools, chat context, or host commands.
+
+**When:** Coding-agent UIs that should open files, quote commits, compare revisions, or refresh after a tool run.
+
+**Events** (bubbling `CustomEvent`s on `<web-git-graph>`):
+
+| Event | `detail` | Notes |
+| --- | --- | --- |
+| `gitgraph-commit-select` | `{ commit }` | Selection changed |
+| `gitgraph-commit-open` | `{ commit }` | Open / activate commit |
+| `gitgraph-compare` | `GitGraphComparison` | After Ctrl/Cmd-click compare |
+| `gitgraph-file-open` | `{ change, base?, head?, comparison? }` | Cancelable; host may open the file |
+| `gitgraph-load-more` | `{ cursor? }` | Cancelable; default loads next page |
+| `gitgraph-error` | `{ error }` | Provider / network failure |
+| `gitgraph-refresh` | `{ repositoryId? }` | Cancelable; default reloads provider |
+| `gitgraph-context-menu` | `{ commit, clientX, clientY }` | Cancelable; replace built-in menu |
+
+**Example: feed agent context + open file in host:**
+
+```ts
+import "@web-git-graph/web/register";
+
+const graph = document.querySelector("#history")!;
+
+graph.addEventListener("gitgraph-commit-select", (event) => {
+  const { commit } = event.detail;
+  agent.setContext({
+    kind: "git-commit",
+    oid: commit.oid,
+    subject: commit.message.split("\n", 1)[0],
+    parents: commit.parents
+  });
+});
+
+graph.addEventListener("gitgraph-file-open", (event) => {
+  event.preventDefault(); // take over default diff fetch UI if desired
+  const path = event.detail.change.path;
+  host.openFile(path);
+});
+
+graph.addEventListener("gitgraph-context-menu", (event) => {
+  event.preventDefault();
+  host.showMenu({
+    x: event.detail.clientX,
+    y: event.detail.clientY,
+    items: [
+      {
+        label: "Ask agent about this commit",
+        run: () => agent.prompt(`Explain commit ${event.detail.commit.oid}`)
+      },
+      {
+        label: "Copy OID",
+        run: () => navigator.clipboard.writeText(event.detail.commit.oid)
+      }
+    ]
+  });
+});
+
+// After an agent mutates the working tree via *other* tools, refresh the graph:
+(graph as HTMLElement & { refresh(): void }).refresh();
+```
+
+**Refresh after agent Git tools:**
+
+The component is read-only. If your agent runs `git commit` / checkout via separate tools, call `graph.refresh()` (keeps scroll + open commit) or re-assign `provider`. To fully replace refresh behavior, listen for `gitgraph-refresh` and `preventDefault()`.
+
+**Pitfalls:**
+
+- `gitgraph-refresh` and `gitgraph-context-menu` / `gitgraph-file-open` / `gitgraph-load-more` honor `preventDefault()` / cancelable dispatch — cancel only when you fully replace the default behavior.
+- Compare requires the provider's `compare` method; otherwise the UI will not offer it.
+
+-----
+# FILE: SECURITY.md
+-----
+
+# Security
+
+## Supported versions
+
+Security fixes are provided for the latest published minor release.
+
+## Reporting
+
+Please report vulnerabilities privately through GitHub Security Advisories for
+`GIS-Info/web-git-graph`. Do not include repository contents, credentials, or
+private patches in a public issue.
+
+## Node backend trust boundary
+
+The bundled backend is intentionally read-only, but it exposes repository
+history and source patches. Deploy it behind your existing authentication and
+authorization.
+
+- Register repositories server-side with opaque IDs.
+- Configure `allowedRoots`.
+- Do not derive a repository path directly from a URL.
+- Keep CORS disabled unless the allowed origin is explicit.
+- Use the `authorize` hook for every request.
+- Use a shared `SnapshotStore` in multi-instance deployments.
+- Keep the Git executable and this package patched.
+
+The backend never invokes a shell and rejects arbitrary Git revision
+expressions, but host-level access policy remains the application's
+responsibility.

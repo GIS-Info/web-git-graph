@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "generate:history": "node ../../scripts/generate-demo-history.mjs",
-    "dev": "node ../../scripts/generate-demo-history.mjs && vite",
-    "build": "node ../../scripts/generate-demo-history.mjs && tsc --noEmit && vite build",
+    "dev": "node ../../scripts/copy-llms-to-demo.mjs && node ../../scripts/generate-demo-history.mjs && vite",
+    "build": "node ../../scripts/copy-llms-to-demo.mjs && node ../../scripts/generate-demo-history.mjs && tsc --noEmit && vite build",
     "typecheck": "node ../../scripts/generate-demo-history.mjs && tsc --noEmit"
   },
   "dependencies": {

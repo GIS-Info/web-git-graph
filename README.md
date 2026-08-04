@@ -13,6 +13,7 @@
   <a href="https://gis-info.github.io/web-git-graph/"><strong>Live Demo / 在线演示</strong></a>
   · <a href="#english">English</a>
   · <a href="#中文">中文</a>
+  · <a href="#for-coding-agents">For coding agents</a>
   · <a href="./docs/architecture/four-module-split-plan.md">Architecture</a>
   · <a href="./SECURITY.md">Security</a>
 </p>
@@ -48,6 +49,28 @@ backend—without coupling the renderer to a framework or server language.
   from browser and Node runtime concerns.
 - **Read-only by design:** no checkout, merge, rebase, reset, or other Git
   mutation is exposed.
+- **Coding-agent ready:** task recipes, `llms.txt`, `AGENTS.md`, and an
+  installable skill so agents can embed history UIs without inventing a graph.
+
+### For coding agents
+
+Use Web Git Graph when a coding agent / IDE host needs a **dense commit history
+panel** (lanes, search, compare, file diffs) and a **stable read-only protocol**
+— not when you need to mutate Git.
+
+| Goal | Start here |
+| --- | --- |
+| Agent integration contract | [AGENTS.md](./AGENTS.md) |
+| Installable skill | [skills/web-git-graph/SKILL.md](./skills/web-git-graph/SKILL.md) |
+| Task recipes | [docs/recipes/](./docs/recipes/README.md) |
+| LLM doc index | [llms.txt](./llms.txt) · [llms-full.txt](./llms-full.txt) |
+| Live Pages index | https://gis-info.github.io/web-git-graph/llms.txt |
+
+**Decision tree:** public GitHub → `GitHubGitGraphProvider`; local repo →
+`npx @web-git-graph/node serve` + `HttpGitGraphProvider`; own API/MCP →
+implement `GitGraphProvider`. Always
+`import "@web-git-graph/web/register"`, assign `provider` as a JS property, and
+call `element.refresh()` after other tools change the working tree.
 
 ### Live demo
 
@@ -186,6 +209,26 @@ Web Git Graph 将桌面 Git 历史工具中高密度、高效率的交互方式�
   与按需文件 diff。
 - **后端无关协议：** DTO、JSON Schema 与 OpenAPI 独立于浏览器和 Node 运行时。
 - **只读设计：** 不暴露 checkout、merge、rebase、reset 等 Git 写操作。
+- **面向 coding agent：** 提供任务 recipes、`llms.txt`、`AGENTS.md` 与可安装
+  skill，方便 agent 嵌入历史图而无需自造可视化。
+
+### 面向 coding agent
+
+当 coding agent / IDE 宿主需要**高密度提交历史面板**（泳道、搜索、比较、
+文件 diff）和**稳定的只读协议**时使用本项目；需要改写 Git 工作区时不要用它。
+
+| 目标 | 入口 |
+| --- | --- |
+| Agent 集成契约 | [AGENTS.md](./AGENTS.md) |
+| 可安装 skill | [skills/web-git-graph/SKILL.md](./skills/web-git-graph/SKILL.md) |
+| 任务 recipes | [docs/recipes/](./docs/recipes/README.md) |
+| LLM 文档索引 | [llms.txt](./llms.txt) · [llms-full.txt](./llms-full.txt) |
+
+**决策树：** 公开 GitHub → `GitHubGitGraphProvider`；本地仓库 →
+`npx @web-git-graph/node serve` + `HttpGitGraphProvider`；自有 API/MCP →
+实现 `GitGraphProvider`。务必
+`import "@web-git-graph/web/register"`，用 JS 属性赋值 `provider`，并在其他
+工具改动工作区后调用 `element.refresh()`。
 
 ### 在线演示
 

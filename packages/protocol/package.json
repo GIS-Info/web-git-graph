@@ -1,7 +1,7 @@
 {
   "name": "@web-git-graph/protocol",
-  "version": "1.0.5",
-  "description": "Transport-neutral DTOs, schemas and error semantics for Web Git Graph.",
+  "version": "1.0.6",
+  "description": "Transport-neutral Git history protocol (DTOs, JSON Schema, OpenAPI, errors) for Web Git Graph and coding-agent backends.",
   "type": "module",
   "license": "MIT",
   "author": "kian-zh",
@@ -11,6 +11,16 @@
     "url": "git+https://github.com/GIS-Info/web-git-graph.git",
     "directory": "packages/protocol"
   },
+  "keywords": [
+    "git",
+    "git-graph",
+    "protocol",
+    "openapi",
+    "json-schema",
+    "dto",
+    "coding-agent",
+    "read-only"
+  ],
   "files": [
     "dist",
     "README.md",

@@ -1,7 +1,7 @@
 {
   "name": "@web-git-graph/node",
-  "version": "1.0.5",
-  "description": "Read-only local Git backend, HTTP handlers and CLI for Web Git Graph.",
+  "version": "1.0.6",
+  "description": "Read-only local Git HTTP backend and CLI for Web Git Graph — safe history/diff API for agent UIs and browsers.",
   "type": "module",
   "license": "MIT",
   "author": "kian-zh",
@@ -11,6 +11,16 @@
     "url": "git+https://github.com/GIS-Info/web-git-graph.git",
     "directory": "packages/node"
   },
+  "keywords": [
+    "git",
+    "git-graph",
+    "git-backend",
+    "http",
+    "cli",
+    "read-only",
+    "coding-agent",
+    "local-repository"
+  ],
   "files": [
     "dist",
     "README.md",
