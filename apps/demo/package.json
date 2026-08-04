@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "generate:history": "node ./scripts/generate-history.mjs",
-    "dev": "node ./scripts/generate-history.mjs && vite",
-    "build": "node ./scripts/generate-history.mjs && tsc --noEmit && vite build",
-    "typecheck": "node ./scripts/generate-history.mjs && tsc --noEmit"
+    "generate:history": "node ../../scripts/generate-demo-history.mjs",
+    "dev": "node ../../scripts/generate-demo-history.mjs && vite",
+    "build": "node ../../scripts/generate-demo-history.mjs && tsc --noEmit && vite build",
+    "typecheck": "node ../../scripts/generate-demo-history.mjs && tsc --noEmit"
   },
   "dependencies": {
     "@web-git-graph/protocol": "workspace:*",

@@ -13,7 +13,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outPath = resolve(__dirname, "../src/history-fixture.json");
+const outPath = resolve(__dirname, "../apps/demo/src/history-fixture.json");
 const owner = "react";
 const repo = "react";
 const fullName = `${owner}/${repo}`;
