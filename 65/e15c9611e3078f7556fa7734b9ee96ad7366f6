@@ -1,0 +1,74 @@
+scripts/copy-llms-to-demo.mjs
+  s_49d4c00cb26456::t_3011e091d32ba5 1-12
+AGENTS.md
+  s_49d4c00cb26456::t_1c8058726c7a2f 1-71
+apps/demo/public/llms-full.txt
+  s_49d4c00cb26456::t_6b7c72b439b9fc 1-578
+llms.txt
+  s_49d4c00cb26456::t_6bf355846206a5 1-36
+docs/recipes/embed-in-agent-ui.md
+  s_49d4c00cb26456::t_ef3414e09b3315 29-30
+  s_49d4c00cb26456::t_5cdfe166d14a27 1-28,31-62
+docs/recipes/custom-provider.md
+  s_49d4c00cb26456::t_927bde608d8fa7 1-27,29,31,34-38,40-82,84-86
+  s_49d4c00cb26456::t_0adbcc1afbf86a 28,30,32-33,39
+  s_49d4c00cb26456::t_1042999428e5b8 83
+apps/demo/public/llms.txt
+  s_49d4c00cb26456::t_6b7c72b439b9fc 1-36
+README.md
+  s_49d4c00cb26456::t_5f7875f526154f 52-54,56-73
+  s_49d4c00cb26456::t_58c4e6a339e346 55
+  s_49d4c00cb26456::t_84c5b5d15817c9 16
+  s_49d4c00cb26456::t_736d035deeac8c 212-231
+packages/web/package.json
+  s_49d4c00cb26456::t_6336814c93c984 4,14-27
+  s_49d4c00cb26456::t_bf34555dd7f1c6 3
+docs/recipes/bridge-events-to-agent-actions.md
+  s_49d4c00cb26456::t_e4edfd8007eb17 1-31,33-61,63-66,68-72
+  s_49d4c00cb26456::t_0dc64f4f573396 32,62,67
+docs/recipes/github-public-repo.md
+  s_49d4c00cb26456::t_fa653c63ec114c 1-47
+docs/recipes/local-repo-http-backend.md
+  s_49d4c00cb26456::t_1c10a7e63d381c 1-56
+llms-full.txt
+  s_49d4c00cb26456::t_6b7c72b439b9fc 1-578
+skills/web-git-graph/SKILL.md
+  s_49d4c00cb26456::t_0aa40809da00f6 1-77
+packages/vscode/package.json
+  s_49d4c00cb26456::t_bf34555dd7f1c6 4
+  s_49d4c00cb26456::t_a94999bfed5a3c 31-33
+packages/web/README.md
+  s_49d4c00cb26456::t_8fb63d3aad7d59 4,12-15
+docs/recipes/README.md
+  s_49d4c00cb26456::t_fec61bfd3c7d49 1-29
+packages/node/README.md
+  s_49d4c00cb26456::t_9e97496c0c3063 3-4,15-16
+apps/demo/package.json
+  s_49d4c00cb26456::t_b581543c7e0139 8-9
+packages/node/package.json
+  s_49d4c00cb26456::t_17b4b37dc250f8 4,14-23
+  s_49d4c00cb26456::t_bf34555dd7f1c6 3
+packages/protocol/README.md
+  s_49d4c00cb26456::t_d22686e1c9601f 7-10
+package.json
+  s_49d4c00cb26456::t_bf34555dd7f1c6 4
+packages/protocol/package.json
+  s_49d4c00cb26456::t_bf34555dd7f1c6 3
+  s_49d4c00cb26456::t_089defc5340aac 4,14-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "65e15c9611e3078f7556fa7734b9ee96ad7366f6",
+  "prompts": {},
+  "sessions": {
+    "s_49d4c00cb26456": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e8623f31-8c32-4517-b034-7cb452673b72",
+        "model": "grok-4.5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
