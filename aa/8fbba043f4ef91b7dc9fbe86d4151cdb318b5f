@@ -1,0 +1,19 @@
+README.md
+  s_245b306c6ad0a7::t_e1f14ee7ff8c69 20-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "aa8fbba043f4ef91b7dc9fbe86d4151cdb318b5f",
+  "prompts": {},
+  "sessions": {
+    "s_245b306c6ad0a7": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2bff5971-c361-419b-b42d-0b226c2ef9e2",
+        "model": "grok-4.5"
+      },
+      "human_author": "jingyuan <zjingyuan@trip.com>"
+    }
+  }
+}
