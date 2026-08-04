@@ -1,7 +1,7 @@
 {
   "name": "web-git-graph",
   "displayName": "Web Git Graph",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Read-only Git history graph with deterministic lanes, commit details and revision diffs.",
   "type": "module",
   "license": "MIT",

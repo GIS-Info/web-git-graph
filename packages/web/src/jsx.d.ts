@@ -12,8 +12,8 @@ import type { WebGitGraphElement } from "./web-component";
  * ```
  *
  * The presentation attributes (`theme`, `density`, `columns`, `date-format`,
- * `date-type`, `avatars`) are typed as React attributes so they can be set
- * directly in JSX. Complex values — the `provider`, `data` and `refs`
+ * `date-type`, `avatars`, `hosted`) are typed as React attributes so they can
+ * be set directly in JSX. Complex values — the `provider`, `data` and `refs`
  * properties — are assigned as JavaScript properties, exactly as with the
  * DOM API, because React cannot pass Web Component properties through
  * attributes.
@@ -25,6 +25,8 @@ export interface WebGitGraphJSXAttributes {
   "date-format"?: "datetime" | "date" | "relative";
   "date-type"?: "committed" | "authored";
   avatars?: boolean;
+  /** Hide the in-component theme toggle; colours follow host `--vscode-*` tokens. */
+  hosted?: boolean;
 }
 
 declare global {

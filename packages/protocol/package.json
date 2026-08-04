@@ -1,6 +1,6 @@
 {
   "name": "@web-git-graph/protocol",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Transport-neutral DTOs, schemas and error semantics for Web Git Graph.",
   "type": "module",
   "license": "MIT",

@@ -1,6 +1,6 @@
 {
   "name": "@web-git-graph/web",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Framework-free Git history graph Web Component and browser providers.",
   "type": "module",
   "license": "MIT",

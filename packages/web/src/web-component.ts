@@ -28,45 +28,50 @@ const IS_APPLE =
 
 const STYLES = `
 :host {
-  --wgg-bg: #1e1e1e;
-  --wgg-panel: #252526;
-  --wgg-panel-raised: #2d2d30;
-  --wgg-ink: #d4d4d4;
-  --wgg-muted: #a9a9a9;
-  --wgg-faint: #777;
-  --wgg-line: #3c3c3c;
-  --wgg-hover: #2a2d2e;
-  --wgg-selected: #37373d;
-  --wgg-accent: #3794ff;
-  --wgg-warning: #cca700;
+  /* Prefer VS Code / host theme tokens when present (they inherit into the
+     shadow tree), then fall back to a neutral dark palette for standalone use. */
+  --wgg-bg: var(--vscode-editor-background, #1e1e1e);
+  --wgg-panel: var(--vscode-sideBar-background, var(--vscode-editorWidget-background, var(--vscode-editor-background, #252526)));
+  --wgg-panel-raised: var(--vscode-editorWidget-background, var(--vscode-sideBar-background, #2d2d30));
+  --wgg-ink: var(--vscode-foreground, var(--vscode-editor-foreground, #d4d4d4));
+  --wgg-muted: var(--vscode-descriptionForeground, #a9a9a9);
+  --wgg-faint: var(--vscode-disabledForeground, #777);
+  --wgg-line: var(--vscode-panel-border, var(--vscode-widget-border, #3c3c3c));
+  --wgg-hover: var(--vscode-list-hoverBackground, #2a2d2e);
+  --wgg-selected: var(--vscode-list-inactiveSelectionBackground, var(--vscode-editor-inactiveSelectionBackground, #37373d));
+  --wgg-accent: var(--vscode-focusBorder, #3794ff);
+  --wgg-warning: var(--vscode-editorWarning-foreground, #cca700);
   --wgg-row-height: 24px;
   --wgg-graph-width: 72px;
   --wgg-date-width: 142px;
   --wgg-author-width: 150px;
   --wgg-commit-width: 82px;
-  --wgg-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --wgg-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   display: block;
   min-height: 420px;
   color: var(--wgg-ink);
-  font-family: var(--wgg-font);
+  font-family: var(--wgg-font, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
   background: var(--wgg-bg);
   border: 1px solid var(--wgg-line);
   overflow: hidden;
   color-scheme: dark;
+  container-type: inline-size;
+  container-name: wgg;
 }
 :host([theme="light"]) {
-  --wgg-bg: #ffffff;
-  --wgg-panel: #f3f3f3;
-  --wgg-panel-raised: #f8f8f8;
-  --wgg-ink: #333333;
-  --wgg-muted: #616161;
-  --wgg-faint: #8e8e8e;
-  --wgg-line: #d4d4d4;
-  --wgg-hover: #f0f0f0;
-  --wgg-selected: #e4e6f1;
+  --wgg-bg: var(--vscode-editor-background, #ffffff);
+  --wgg-panel: var(--vscode-sideBar-background, var(--vscode-editorWidget-background, var(--vscode-editor-background, #f3f3f3)));
+  --wgg-panel-raised: var(--vscode-editorWidget-background, var(--vscode-sideBar-background, #f8f8f8));
+  --wgg-ink: var(--vscode-foreground, var(--vscode-editor-foreground, #333333));
+  --wgg-muted: var(--vscode-descriptionForeground, #616161);
+  --wgg-faint: var(--vscode-disabledForeground, #8e8e8e);
+  --wgg-line: var(--vscode-panel-border, var(--vscode-widget-border, #d4d4d4));
+  --wgg-hover: var(--vscode-list-hoverBackground, #f0f0f0);
+  --wgg-selected: var(--vscode-list-inactiveSelectionBackground, var(--vscode-editor-inactiveSelectionBackground, #e4e6f1));
+  --wgg-accent: var(--vscode-focusBorder, #3794ff);
+  --wgg-warning: var(--vscode-editorWarning-foreground, #cca700);
   color-scheme: light;
 }
+:host([hosted]) .theme-toggle { display: none; }
 :host([density="compact"]) { --wgg-row-height: 20px; }
 * { box-sizing: border-box; }
 button, input, select { font: inherit; color: inherit; }
@@ -86,7 +91,7 @@ button { cursor: pointer; }
 .branch-control strong, .remote-control { font-weight: 600; }
 .remote-control input { margin: 0; accent-color: var(--wgg-accent); }
 .ref-select {
-  height: 28px; max-width: min(250px, 28vw); display: flex; align-items: center; gap: 6px;
+  height: 28px; max-width: min(250px, 40cqw); display: flex; align-items: center; gap: 6px;
   border: 1px solid var(--wgg-line); background: var(--wgg-bg); border-radius: 2px; padding: 3px 7px;
 }
 .ref-select:hover { background: var(--wgg-hover); }
@@ -97,7 +102,7 @@ button { cursor: pointer; }
   white-space: nowrap; text-align: center;
 }
 .search {
-  width: min(240px, 25vw); height: 28px; border: 1px solid var(--wgg-line); background: var(--wgg-bg);
+  width: min(240px, 40cqw); height: 28px; border: 1px solid var(--wgg-line); background: var(--wgg-bg);
   border-radius: 2px; padding: 4px 7px; outline: none; font-size: 12px;
 }
 .search:focus, select:focus, button:focus-visible { outline: 1px solid var(--wgg-accent); outline-offset: -1px; }
@@ -120,8 +125,10 @@ select, .icon-button {
 .history { min-width: 0; height: 100%; display: grid; grid-template-rows: 34px minmax(0, 1fr); }
 .header, .row {
   display: grid;
+  /* Description may shrink to zero so the graph column keeps its reserved
+     width; the commit message ellipsises before branch chips are clipped. */
   grid-template-columns:
-    var(--wgg-graph-width) minmax(220px, 1fr) var(--wgg-date-width)
+    var(--wgg-graph-width) minmax(0, 1fr) var(--wgg-date-width)
     var(--wgg-author-width) var(--wgg-commit-width);
   align-items: center;
 }
@@ -134,7 +141,7 @@ select, .icon-button {
   padding: 0 8px; border-right: 1px solid var(--wgg-line);
 }
 .scroller { position: relative; overflow: auto; min-height: 0; outline: none; scrollbar-color: var(--wgg-faint) transparent; }
-.spacer { position: relative; min-width: 720px; }
+.spacer { position: relative; min-width: max(100%, calc(var(--wgg-graph-width) + 280px + var(--wgg-date-width) + var(--wgg-author-width) + var(--wgg-commit-width))); }
 .window { position: absolute; inset: 0 0 auto 0; min-height: 100%; }
 .row {
   height: var(--wgg-row-height); padding-right: 10px;
@@ -149,13 +156,17 @@ select, .icon-button {
 .row.merge .message { color: var(--wgg-muted); }
 .row.working-tree .message { font-weight: 600; }
 .row:focus { outline: 1px solid var(--wgg-accent); outline-offset: -1px; }
-.graph-cell { height: 100%; position: relative; }
-.subject { min-width: 0; display: flex; align-items: center; gap: 5px; padding: 0 4px; }
-.message { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.refs { flex: 0 1 auto; display: flex; gap: 2px; min-width: 0; overflow: hidden; }
+.graph-cell { height: 100%; position: relative; overflow: hidden; }
+.subject {
+  min-width: 0; display: flex; align-items: center; gap: 5px; padding: 0 4px;
+  overflow: hidden; position: relative; z-index: 2;
+}
+.message { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Branch chips never ellipsis — same behaviour as vscode-git-graph's .gitRef. */
+.refs { flex: 0 0 auto; display: flex; gap: 2px; }
 .ref {
-  max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font: 600 10px/15px var(--wgg-font); padding: 0 5px; border-radius: 2px;
+  flex: 0 0 auto; white-space: nowrap;
+  font: 600 10px/15px var(--wgg-font, inherit); padding: 0 5px; border-radius: 2px;
   border: 1px solid var(--ref-color, var(--wgg-accent));
   background: color-mix(in srgb, var(--ref-color, var(--wgg-accent)) 18%, transparent);
   color: var(--wgg-ink);
@@ -178,14 +189,14 @@ select, .icon-button {
 .ref.stash { --ref-color: #9b2f86; }
 .author, .date, .oid {
   min-width: 0; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: var(--wgg-ink);
+  color: var(--wgg-ink); position: relative; z-index: 2;
 }
 .date, .author { text-align: center; }
 .author { display: flex; align-items: center; justify-content: center; gap: 5px; }
 .author-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .avatar {
   position: relative; flex: none; width: 16px; height: 16px; border-radius: 50%; overflow: hidden;
-  display: grid; place-items: center; font: 600 9px/1 var(--wgg-font); color: #fff;
+  display: grid; place-items: center; font: 600 9px/1 var(--wgg-font, inherit); color: #fff;
   background: var(--avatar-color, var(--wgg-faint));
 }
 .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -216,9 +227,11 @@ select, .icon-button {
   text-transform: uppercase; letter-spacing: 0.04em;
 }
 .menu-separator { height: 1px; margin: 4px 2px; background: var(--wgg-line); }
-.oid { font-family: var(--wgg-mono); font-size: 11px; text-align: center; }
+.oid { font-family: var(--wgg-mono, ui-monospace, SFMono-Regular, Consolas, monospace); font-size: 11px; text-align: center; }
 .graph {
-  position: absolute; z-index: 4; pointer-events: none; overflow: visible;
+  /* Clip to the graph column so strokes never paint over description text. */
+  position: absolute; left: 0; z-index: 1; pointer-events: none;
+  width: var(--wgg-graph-width); overflow: hidden;
 }
 .graph path { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; }
 .graph circle { stroke-width: 1.5; vector-effect: non-scaling-stroke; }
@@ -246,7 +259,7 @@ select, .icon-button {
 .meta { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 10px; margin: 0; }
 .meta dt { color: var(--wgg-muted); font-weight: 600; }
 .meta dd { margin: 0; overflow-wrap: anywhere; }
-.meta .oid-value { font-family: var(--wgg-mono); font-size: 11px; }
+.meta .oid-value { font-family: var(--wgg-mono, ui-monospace, SFMono-Regular, Consolas, monospace); font-size: 11px; }
 .commit-body { margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; }
 .actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
 .action {
@@ -265,17 +278,17 @@ select, .icon-button {
 .tree-file.active { background: var(--wgg-selected); }
 .twistie { flex: none; width: 10px; color: var(--wgg-muted); font-size: 9px; }
 .dir-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--wgg-muted); }
-.change-code { flex: none; width: 12px; text-align: center; font: 11px var(--wgg-mono); color: var(--wgg-muted); }
+.change-code { flex: none; width: 12px; text-align: center; font: 11px var(--wgg-mono, ui-monospace, monospace); color: var(--wgg-muted); }
 .change-code.add { color: #81b88b; }
 .change-code.modify { color: #e2c08d; }
 .change-code.delete { color: #f14c4c; }
 .change-code.rename, .change-code.copy { color: #6cb8e6; }
 .change-path { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; }
-.stats { flex: none; font: 10px var(--wgg-mono); color: var(--wgg-muted); }
+.stats { flex: none; font: 10px var(--wgg-mono, ui-monospace, monospace); color: var(--wgg-muted); }
 .no-changes { margin: 6px 4px; color: var(--wgg-faint); font-size: 11px; }
 .patch {
   margin: 10px 0 0; padding: 10px; overflow: auto; border: 1px solid var(--wgg-line);
-  background: var(--wgg-bg); font: 10px/1.55 var(--wgg-mono); white-space: pre; tab-size: 2;
+  background: var(--wgg-bg); font: 10px/1.55 var(--wgg-mono, ui-monospace, monospace); white-space: pre; tab-size: 2;
 }
 .empty, .loading, .error { display: grid; place-items: center; min-height: 220px; color: var(--wgg-muted); text-align: center; padding: 30px; }
 .error { color: #ff8585; }
@@ -284,12 +297,19 @@ select, .icon-button {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-@media (max-width: 760px) {
+/* Use the host width — not the IDE window — so a narrow webview/side panel
+   collapses columns the same way a narrow browser window would. */
+@container wgg (max-width: 760px) {
   .toolbar { gap: 8px; }
   .remote-control, .repository-name, .find { display: none; }
   .branch-control { flex: 1; min-width: 0; }
   .ref-select { flex: 1; max-width: none; }
-  .header, .row { grid-template-columns: var(--wgg-graph-width) minmax(220px, 1fr) var(--wgg-commit-width); }
+  .header, .row {
+    grid-template-columns: var(--wgg-graph-width) minmax(0, 1fr) var(--wgg-commit-width);
+  }
+  .spacer {
+    min-width: max(100%, calc(var(--wgg-graph-width) + 160px + var(--wgg-commit-width)));
+  }
   .col-date, .col-author, .date, .author { display: none; }
   .inline-details { flex-direction: column; padding-left: 12px; }
   .details-files { border-left: 0; border-top: 1px solid var(--wgg-line); }
@@ -1316,6 +1336,7 @@ export class WebGitGraphElement extends HTMLElementBase {
         const prefix =
           ref.kind === "tag" ? "◇" : ref.kind === "stash" ? "≋" : ref.kind === "remote" ? "↗" : "⑂";
         badge.textContent = `${prefix} ${label}`;
+        badge.title = label;
         const node = nodesByOid.get(commit.oid);
         if (node && LANE_COLOURED_REFS.has(ref.kind)) {
           badge.style.setProperty("--ref-color", PALETTE[node.colour % PALETTE.length]!);

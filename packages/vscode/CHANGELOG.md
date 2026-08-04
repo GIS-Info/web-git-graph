@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.4
+
+- The graph follows the host colour theme (`--vscode-*` tokens), so custom
+  light themes (for example Kiro's beige UI) no longer force a white panel.
+- Branch chips keep their full names when the view is narrow; the commit
+  message ellipsises first, matching vscode-git-graph.
+- Graph strokes are clipped to the graph column, and narrow layouts use the
+  webview's own width (container queries) so description text no longer
+  overlaps the lane drawing.
+
 ## 1.0.3
 
 - `addEventListener` / `removeEventListener` on `WebGitGraphElement` are now

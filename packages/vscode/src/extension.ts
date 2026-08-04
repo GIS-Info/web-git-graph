@@ -513,7 +513,7 @@ function webviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string 
     header[hidden] { display: none; }
     label { color: var(--vscode-descriptionForeground); font-size: 12px; }
     select { min-width: 220px; color: var(--vscode-dropdown-foreground); background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); }
-    web-git-graph { min-height: 0; border: 0; }
+    web-git-graph { min-height: 0; border: 0; width: 100%; height: 100%; }
   </style>
 </head>
 <body>
@@ -521,7 +521,7 @@ function webviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string 
     <label for="repository">Repository</label>
     <select id="repository" aria-label="Repository"></select>
   </header>
-  <web-git-graph id="graph"></web-git-graph>
+  <web-git-graph id="graph" hosted></web-git-graph>
   <script type="module" nonce="${nonce}" src="${script.toString()}"></script>
 </body>
 </html>`;
